@@ -1,0 +1,2 @@
+runtime: java17
+entrypoint: 'java -jar ktorsample.jesusdmedinac.com.ktor-sample-all.jar'
