@@ -77,7 +77,7 @@ class CurrentLocationService : Service() {
                             UserLocation(
                                 latitude,
                                 longitude,
-                                bearing,
+                                bearing.toDouble(),
                             )
                         }
                         ?.let { homeScreenViewModel.onLocationChange(it) }

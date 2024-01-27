@@ -31,11 +31,9 @@ class HomeScreenViewModel(
     private val _state = MutableStateFlow(HomeScreenState())
     val state = _state.asStateFlow()
 
-    init {
-        scope.launch {
-            gobusRepository
-                .updateIsTraveling(isTraveling = false)
-        }
+    fun onCleared() = scope.launch {
+        gobusRepository
+            .stopTravelOn()
     }
 
     fun onLocationChange(userLocation: UserLocation) = scope.launch {
@@ -45,7 +43,7 @@ class HomeScreenViewModel(
             )
         }
         gobusRepository
-            .updateCurrentPosition(userPosition = userLocation)
+            .updateCurrentPosition(userLocation = userLocation)
     }
 
     fun onStartTravelingClick() = scope.launch {
@@ -73,18 +71,11 @@ class HomeScreenViewModel(
                 isStopTravelingDialogShown = false,
             )
         }
-        gobusRepository
-            .updateIsTraveling(isTraveling = true)
-            .onSuccess {
-                state
-                    .value
-                    .selectedPath
-                    .takeIf { it.isNotEmpty() }
-                    ?.let { selectedPath -> gobusRepository.startTravelOn(selectedPath) }
-            }
-            .onFailure {
-                it.printStackTrace()
-            }
+        state
+            .value
+            .selectedPath
+            .takeIf { it.isNotEmpty() }
+            ?.let { selectedPath -> gobusRepository.startTravelOn(selectedPath) }
     }
 
     fun stopTraveling() = scope.launch {
@@ -95,13 +86,7 @@ class HomeScreenViewModel(
                 isStopTravelingDialogShown = false,
             )
         }
-        gobusRepository
-            .updateIsTraveling(isTraveling = false)
-        state
-            .value
-            .selectedPath
-            .takeIf { it.isNotEmpty() }
-            ?.let { selectedPath -> gobusRepository.stopTravelOn(selectedPath) }
+        gobusRepository.stopTravelOn()
     }
 
     fun onPathChange(path: String) = scope.launch {
@@ -111,12 +96,12 @@ class HomeScreenViewModel(
             )
         }
         gobusRepository
-            .getTravelThatContains(path)
-            .onSuccess { travels ->
-                _state.update { state -> state.copy(paths = travels.map { it.path }) }
+            .getPathsThatContains(path)
+            .onSuccess { paths ->
+                _state.update { state -> state.copy(paths = paths.map { it.name }) }
             }
             .onFailure {
-                it.printStackTrace()
+                // it.printStackTrace()
             }
     }
 }

@@ -29,7 +29,7 @@ class LoginScreenViewModel(
                     }
                 }
                 .onFailure {
-                    it.printStackTrace()
+                    // it.printStackTrace()
                 }
         }
     }

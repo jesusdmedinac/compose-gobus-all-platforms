@@ -1,8 +1,14 @@
 package com.jesusdmedinac.gobus.domain.model
 
+import io.realm.kotlin.ext.realmListOf
+import io.realm.kotlin.types.RealmList
+import kotlinx.datetime.Instant
+
 data class Travel(
-    val path: String = "",
-    val locationHistory: List<UserLocation> = emptyList(),
-    val activeTravelers: List<Traveler> = emptyList(),
-    val activeDrivers: List<Driver> = emptyList(),
+    val startTime: Instant? = null,
+    val endTime: Instant? = null,
+    val path: Path? = null,
+    val traveler: Traveler? = null,
+    val driver: Driver? = null,
+    val locationHistory: RealmList<UserLocation> = realmListOf(),
 )

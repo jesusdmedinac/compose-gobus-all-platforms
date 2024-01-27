@@ -7,9 +7,7 @@ import org.mongodb.kbson.ObjectId
 class Traveler : RealmObject {
     @PrimaryKey
     var _id: ObjectId = ObjectId()
-    var email: String = ""
-    var password: String = ""
-    var traveling: Boolean = false
+    var userCredentials: UserCredentials? = null
+    var favoritePath: String = ""
     var currentLocation: UserLocation? = UserLocation()
-    var path: String = ""
 }

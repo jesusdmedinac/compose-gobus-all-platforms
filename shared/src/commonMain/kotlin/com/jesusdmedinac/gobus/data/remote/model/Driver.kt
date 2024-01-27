@@ -7,9 +7,7 @@ import org.mongodb.kbson.ObjectId
 class Driver : RealmObject {
     @PrimaryKey
     var _id: ObjectId = ObjectId()
-    var email: String = ""
-    var password: String = ""
-    var traveling: Boolean = false
-    var currentPosition: UserLocation? = UserLocation()
-    var path: String = ""
+    var userCredentials: UserCredentials? = null
+    var workingPath: String = ""
+    var currentLocation: UserLocation? = UserLocation()
 }

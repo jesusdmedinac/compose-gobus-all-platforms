@@ -26,6 +26,7 @@ kotlin {
             api(libs.realm.sync)
             api(libs.kotlinx.serialization.json)
             implementation(libs.coroutines.core)
+            api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
         }
         androidMain.dependencies {
             implementation(libs.coroutines.android)

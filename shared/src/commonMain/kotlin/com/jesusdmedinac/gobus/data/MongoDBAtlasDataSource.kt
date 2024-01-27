@@ -1,10 +1,11 @@
 package com.jesusdmedinac.gobus.data
 
 import com.jesusdmedinac.gobus.data.remote.model.Driver
+import com.jesusdmedinac.gobus.data.remote.model.Path
 import com.jesusdmedinac.gobus.data.remote.model.Travel
 import com.jesusdmedinac.gobus.data.remote.model.Traveler
+import com.jesusdmedinac.gobus.data.remote.model.UserCredentials
 import com.jesusdmedinac.gobus.data.remote.model.UserLocation
-import com.jesusdmedinac.gobus.data.remote.server.model.UserCredentials
 import io.realm.kotlin.Realm
 import io.realm.kotlin.ext.query
 import io.realm.kotlin.mongodb.App
@@ -14,6 +15,7 @@ import io.realm.kotlin.mongodb.exceptions.UserAlreadyExistsException
 import io.realm.kotlin.mongodb.subscriptions
 import io.realm.kotlin.mongodb.sync.SyncConfiguration
 import kotlin.native.concurrent.ThreadLocal
+import com.jesusdmedinac.gobus.domain.model.UserCredentials as DomainUserCredentials
 
 @ThreadLocal
 object RealmAtlas {
@@ -26,16 +28,19 @@ private fun User.openRealm(): Result<Realm> = runCatching {
     val realm = SyncConfiguration.Builder(
         user = this,
         schema = setOf(
-            Traveler::class,
             Driver::class,
-            UserLocation::class,
+            Path::class,
             Travel::class,
+            Traveler::class,
+            UserCredentials::class,
+            UserLocation::class,
         ),
     )
         .initialSubscriptions(rerunOnOpen = true) { realm ->
-            add(realm.query<Traveler>())
             add(realm.query<Driver>())
+            add(realm.query<Path>())
             add(realm.query<Travel>())
+            add(realm.query<Traveler>())
         }
         .errorHandler { session, error ->
             println("Error message: " + error.message.toString())
@@ -48,7 +53,7 @@ private fun User.openRealm(): Result<Realm> = runCatching {
 
 class MongoDBAtlasDataSource {
 
-    suspend fun login(userCredentials: UserCredentials): Result<Realm> =
+    suspend fun login(userCredentials: DomainUserCredentials): Result<Realm> =
         RealmAtlas
             .app
             .login(Credentials.emailPassword(userCredentials.email, userCredentials.password))
@@ -56,8 +61,11 @@ class MongoDBAtlasDataSource {
             .onSuccess { realm ->
                 realm.subscriptions.waitForSynchronization()
             }
+            .onFailure {
+                it.printStackTrace()
+            }
 
-    suspend fun signup(userCredentials: UserCredentials): Result<Realm> =
+    suspend fun signup(userCredentials: DomainUserCredentials): Result<Realm> =
         runCatching {
             RealmAtlas
                 .app
@@ -84,14 +92,14 @@ class MongoDBAtlasDataSource {
                 ?: throw Throwable("User is not logged in")
         }
 
-    val remoteGobusDataSource: Result<GobusDataSource>
+    val remoteGobusRemoteDataSource: Result<GobusRemoteDataSource>
         get() = currentUser
             .fold(
                 onSuccess = { user ->
                     user
                         .openRealm()
                         .fold(
-                            onSuccess = { Result.success(GobusDataSource(it)) },
+                            onSuccess = { Result.success(GobusRemoteDataSource(it)) },
                             onFailure = { Result.failure(it) },
                         )
                 },

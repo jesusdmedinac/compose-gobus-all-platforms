@@ -2,17 +2,30 @@ import androidx.compose.ui.interop.UIKitView
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
+import platform.CoreGraphics.CGAffineTransform
+import platform.CoreGraphics.CGAffineTransformMakeRotation
 import platform.CoreLocation.CLLocationCoordinate2D
 import platform.CoreLocation.CLLocationCoordinate2DMake
+import platform.CoreLocation.CLLocationManager
+import platform.CoreLocation.CLLocationManagerDelegateProtocol
+import platform.Foundation.setValue
 import platform.MapKit.MKAnnotationProtocol
+import platform.MapKit.MKAnnotationView
+import platform.MapKit.MKAnnotationViewDragState
 import platform.MapKit.MKMapView
+import platform.MapKit.MKMapViewDelegateProtocol
 import platform.MapKit.MKMarkerAnnotationView
 import platform.MapKit.MKPointAnnotation
+import platform.UIKit.UIViewController
+import platform.UIKit.addChildViewController
+import platform.darwin.NSObject
+import kotlin.math.PI
 
 @OptIn(ExperimentalForeignApi::class)
 data class ActiveUser(
     val path: String,
     val email: String,
+    val angle: CValue<CGAffineTransform>,
     val coordindate: CValue<CLLocationCoordinate2D>?,
 )
 
@@ -63,6 +76,9 @@ fun MainViewController(
                                     ActiveUser(
                                         travel.path,
                                         traveler.email,
+                                        angle = CGAffineTransformMakeRotation(
+                                            traveler.currentPosition?.bearing ?: 0.0,
+                                        ),
                                         traveler
                                             .currentPosition
                                             ?.let {
@@ -80,9 +96,13 @@ fun MainViewController(
                                     }
                                 }
                                 .map { driver ->
+                                    val radians =
+                                        ((driver.currentPosition?.bearing ?: 0.0) * PI / 180)
+                                    println("radians $radians")
                                     ActiveUser(
                                         travel.path,
                                         driver.email,
+                                        angle = CGAffineTransformMakeRotation(radians),
                                         driver
                                             .currentPosition
                                             ?.let {
@@ -107,23 +127,27 @@ fun MainViewController(
                             }
                         }
                         .map { activeUser ->
-                            val annotation = MKPointAnnotation().apply {
+                            MKPointAnnotation().apply {
+                                setTitle(activeUser.email)
+                                activeUser.coordindate?.let { setCoordinate(it) }
+                            }
+                            /*val annotation = MKPointAnnotation().apply {
                                 setTitle(activeUser.path)
                                 activeUser.coordindate?.let { setCoordinate(it) }
                             }
                             val mkMarkerAnnotationView = MKMarkerAnnotationView(
                                 annotation,
                                 reuseIdentifier = activeUser.email,
-                            )
+                            ).apply {
+                                setTransform(activeUser.angle)
+                            }
                             mkMarkerAnnotationView
-                                .annotation
+                                .annotation*/
                         }
                     mkMapView.addAnnotations(annotations)
                 },
             )
         },
-        onHomeDisplayed = {
-            onHomeDisplayed()
-        },
+        onHomeDisplayed = onHomeDisplayed,
     )
 }

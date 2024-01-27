@@ -6,6 +6,6 @@ import io.realm.kotlin.types.RealmInstant
 class UserLocation : EmbeddedRealmObject {
     var lat: Double = 0.0
     var long: Double = 0.0
-    var bearing: Float = 0f
+    var bearing: Double = 0.0
     var timestamp: RealmInstant = RealmInstant.now()
 }

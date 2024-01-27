@@ -19,15 +19,16 @@ class SignupScreenViewModel(
     val state = _state
 
     fun signup() = scope.launch {
-        state
-            .value
-            .run {
-                gobusRepository.signup(
-                    userCredentials,
-                    userType,
-                    path,
-                )
-            }
+        with(
+            state
+                .value,
+        ) {
+            gobusRepository.signup(
+                userCredentials,
+                userType,
+                path,
+            )
+        }
             .onSuccess {
                 _state.update {
                     it.copy(createUserStep = CreateUserStep.Signup)

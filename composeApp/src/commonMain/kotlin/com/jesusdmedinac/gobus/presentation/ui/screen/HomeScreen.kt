@@ -181,7 +181,7 @@ fun HomeScreen(
     ) {
         maps(
             Modifier.fillMaxSize(),
-            homeScreenState.currentPosition,
+            homeScreenState.userLocation,
             mapState,
         )
         Box(

@@ -8,4 +8,5 @@ class Traveler : RealmObject {
     @PrimaryKey
     var _id: ObjectId = ObjectId()
     var email: String = ""
+    var isTraveling: Boolean = false
 }
