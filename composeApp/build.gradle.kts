@@ -36,8 +36,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.activity.compose)
-            implementation("com.google.maps.android:maps-compose:2.11.4")
-            implementation("com.google.android.gms:play-services-maps:18.1.0")
+            implementation(libs.google.maps.compose)
+            implementation(libs.google.maps.services)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -51,7 +51,7 @@ kotlin {
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
-            implementation("org.jxmapviewer:jxmapviewer2:2.8")
+            implementation(libs.desktop.jxmapviewer)
         }
     }
 }

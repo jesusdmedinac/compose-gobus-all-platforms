@@ -24,6 +24,9 @@ coroutines = "1.8.0-RC2"
 kotlinx = "1.6.2"
 decompose = "2.2.2"
 playServicesLocation = "21.0.1"
+googleMapsCompose = "2.11.4"
+googleMapsServices = "18.1.0"
+jxMapViewer = "2.8"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -55,6 +58,9 @@ coroutines-core-jvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+google-maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "googleMapsCompose" }
+google-maps-services = { module = "com.google.android.gms:play-services-maps", version.ref = "googleMapsServices" }
+desktop-jxmapviewer = { module = "org.jxmapviewer:jxmapviewer2", version.ref = "jxMapViewer" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -96,6 +96,8 @@ class MainActivity : ComponentActivity() {
                     val mapUiSettings = remember {
                         MapUiSettings(
                             mapToolbarEnabled = false,
+                            zoomControlsEnabled = false,
+                            myLocationButtonEnabled = false,
                         )
                     }
                     GoogleMap(
@@ -106,13 +108,14 @@ class MainActivity : ComponentActivity() {
                     ) {
                         val icon =
                             BitmapDescriptorFactory.fromResource(R.drawable.bus_ceil)
-                        mapState
+                        val paths = mapState
                             .paths
+                        paths
                             .forEach { path ->
+
                                 path
                                     .activeTravelers
                                     .mapNotNull { traveler ->
-                                        println("dani mapNotNull $traveler")
                                         if (traveler.isTraveling) {
                                             traveler
                                         } else {
