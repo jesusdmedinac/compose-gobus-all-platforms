@@ -444,8 +444,8 @@ class GobusRepository(
     suspend fun getPaths() = withContext(Dispatchers.IO) {
         gobusRemoteDataSource
             .fold(
-                onSuccess = {
-                    it
+                onSuccess = { gobusRemoteDataSource ->
+                    gobusRemoteDataSource
                         .getPaths()
                         .fold(
                             onSuccess = { flowOfPaths ->

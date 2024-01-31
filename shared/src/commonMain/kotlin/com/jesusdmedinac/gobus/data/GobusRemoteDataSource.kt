@@ -100,7 +100,7 @@ class GobusRemoteDataSource(
                     .toList()
             } else {
                 realm
-                    .query<Path>("path LIKE[c] \"*$pathPrompt*\"")
+                    .query<Path>("name LIKE[c] \"*$pathPrompt*\"")
                     .limit(10)
                     .find()
                     .toList()

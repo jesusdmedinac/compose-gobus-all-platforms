@@ -15,6 +15,7 @@
 		D9339E9E2B58D49400FB98A8 /* iosMain in Resources */ = {isa = PBXBuildFile; fileRef = D9339E9C2B58D49400FB98A8 /* iosMain */; };
 		D936A4782B5BCDD400F73C4F /* MapViewDelegateImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = D936A4772B5BCDD400F73C4F /* MapViewDelegateImpl.swift */; };
 		D936A47A2B5BCE6600F73C4F /* CLLocationManagerDelegateImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = D936A4792B5BCE6600F73C4F /* CLLocationManagerDelegateImpl.swift */; };
+		D9BC62BB2B68C4E20000F9A2 /* BusAnnotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9BC62BA2B68C4E20000F9A2 /* BusAnnotation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 		D9339E9C2B58D49400FB98A8 /* iosMain */ = {isa = PBXFileReference; lastKnownFileType = folder; name = iosMain; path = ../../shared/src/iosMain; sourceTree = "<group>"; };
 		D936A4772B5BCDD400F73C4F /* MapViewDelegateImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewDelegateImpl.swift; sourceTree = "<group>"; };
 		D936A4792B5BCE6600F73C4F /* CLLocationManagerDelegateImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLLocationManagerDelegateImpl.swift; sourceTree = "<group>"; };
+		D9BC62BA2B68C4E20000F9A2 /* BusAnnotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusAnnotation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -76,6 +78,7 @@
 				058557D7273AAEEB004C7B11 /* Preview Content */,
 				D936A4772B5BCDD400F73C4F /* MapViewDelegateImpl.swift */,
 				D936A4792B5BCE6600F73C4F /* CLLocationManagerDelegateImpl.swift */,
+				D9BC62BA2B68C4E20000F9A2 /* BusAnnotation.swift */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -191,6 +194,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D936A4782B5BCDD400F73C4F /* MapViewDelegateImpl.swift in Sources */,
+				D9BC62BB2B68C4E20000F9A2 /* BusAnnotation.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				D936A47A2B5BCE6600F73C4F /* CLLocationManagerDelegateImpl.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,

@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -29,9 +30,6 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.jesusdmedinac.gobus.domain.model.Path
-import com.jesusdmedinac.gobus.domain.model.Travel
-import com.jesusdmedinac.gobus.domain.model.UserLocation
 import com.jesusdmedinac.gobus.presentation.viewmodel.HomeScreenViewModel
 
 class MainActivity : ComponentActivity() {
@@ -106,12 +104,15 @@ class MainActivity : ComponentActivity() {
                         properties = mapProperties,
                         uiSettings = mapUiSettings,
                     ) {
+                        val icon =
+                            BitmapDescriptorFactory.fromResource(R.drawable.bus_ceil)
                         mapState
                             .paths
                             .forEach { path ->
                                 path
                                     .activeTravelers
                                     .mapNotNull { traveler ->
+                                        println("dani mapNotNull $traveler")
                                         if (traveler.isTraveling) {
                                             traveler
                                         } else {
@@ -121,8 +122,20 @@ class MainActivity : ComponentActivity() {
                                     .forEach { traveler ->
                                         traveler
                                             .currentLocation
-                                            ?.let { currentPosition ->
-                                                BusMarker(currentPosition, path)
+                                            ?.let { currentLocation ->
+                                                Marker(
+                                                    state = MarkerState(
+                                                        position = LatLng(
+                                                            currentLocation.lat,
+                                                            currentLocation.long,
+                                                        ),
+                                                    ),
+                                                    title = path.name,
+                                                    snippet = path.name,
+                                                    icon = icon,
+                                                    rotation = (currentLocation.bearing + 90.0).toFloat(),
+                                                    anchor = Offset(0.5f, 0.5f),
+                                                )
                                             }
                                     }
                                 path
@@ -136,9 +149,21 @@ class MainActivity : ComponentActivity() {
                                     }
                                     .forEach { driver ->
                                         driver
-                                            .currentPosition
-                                            ?.let { currentPosition ->
-                                                BusMarker(currentPosition, path)
+                                            .currentLocation
+                                            ?.let { currentLocation ->
+                                                Marker(
+                                                    state = MarkerState(
+                                                        position = LatLng(
+                                                            currentLocation.lat,
+                                                            currentLocation.long,
+                                                        ),
+                                                    ),
+                                                    title = path.name,
+                                                    snippet = path.name,
+                                                    icon = icon,
+                                                    rotation = (currentLocation.bearing + 90.0).toFloat(),
+                                                    anchor = Offset(0.5f, 0.5f),
+                                                )
                                             }
                                     }
                             }
@@ -153,25 +178,6 @@ class MainActivity : ComponentActivity() {
                 },
             )
         }
-    }
-
-    @Composable
-    private fun BusMarker(
-        currentPosition: UserLocation,
-        path: Path,
-    ) {
-        Marker(
-            state = MarkerState(
-                position = LatLng(
-                    currentPosition.lat,
-                    currentPosition.long,
-                ),
-            ),
-            title = path.name,
-            snippet = path.name,
-            icon = BitmapDescriptorFactory.fromResource(R.drawable.bus_ceil),
-            rotation = currentPosition.bearing.toFloat(),
-        )
     }
 
     private fun startTrackingLocation(onPermissionGranted: () -> Unit) {

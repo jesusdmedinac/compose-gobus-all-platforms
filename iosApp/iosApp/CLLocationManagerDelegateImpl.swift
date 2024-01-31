@@ -31,7 +31,8 @@ class CLLocationManagerDelegateImpl : NSObject, CLLocationManagerDelegate {
       userLocation: SharedUserLocation(
         lat: Double(location.coordinate.latitude),
         long: Double(location.coordinate.longitude),
-        bearing: Double(location.course)
+        bearing: Double(location.course), 
+        timestamp: InstantUtilsKt.now()
       )
     )
   }

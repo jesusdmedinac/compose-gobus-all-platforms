@@ -8,8 +8,6 @@ import com.jesusdmedinac.gobus.domain.model.UserCredentials
 import com.jesusdmedinac.gobus.domain.model.UserLocation
 import io.realm.kotlin.types.RealmInstant
 import kotlinx.datetime.Instant
-import com.jesusdmedinac.gobus.data.local.model.Driver as LocalDriver
-import com.jesusdmedinac.gobus.data.local.model.Traveler as LocalTraveler
 import com.jesusdmedinac.gobus.data.remote.model.Driver as DataDriver
 import com.jesusdmedinac.gobus.data.remote.model.Path as DataPath
 import com.jesusdmedinac.gobus.data.remote.model.Travel as DataTravel
@@ -49,17 +47,15 @@ fun DataUserLocation.toDomainUserLocation(): UserLocation = UserLocation(
     timestamp.toInstant(),
 )
 
-fun DataTraveler.toDomainTraveler(traveler: LocalTraveler? = null): Traveler = Traveler(
+fun DataTraveler.toDomainTraveler(): Traveler = Traveler(
     userCredentials?.email ?: "",
     favoritePath,
-    isTraveling = traveler?.isTraveling ?: false,
     currentLocation?.toDomainUserLocation(),
 )
 
-fun DataDriver.toDomainDriver(driver: LocalDriver? = null): Driver = Driver(
+fun DataDriver.toDomainDriver(): Driver = Driver(
     userCredentials?.email ?: "",
     workingPath,
-    isTraveling = driver?.isTraveling ?: false,
     currentLocation?.toDomainUserLocation(),
 )
 

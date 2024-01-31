@@ -14,7 +14,14 @@ struct ComposeView: UIViewControllerRepresentable {
       mkMapView: mkMapView,
       onHomeDisplayed: {
         self.locationManager.requestAlwaysAuthorization()
+        mapViewDelegateImpl.bindMap()
+      }, onCurrentLocationChange: { userLocation in
+        mapViewDelegateImpl.currentLocation = userLocation
+      },
+      onMapStateChange: { mapState in
+        mapViewDelegateImpl.onMapStateChange(mapState: mapState)
       })
+    mapViewDelegateImpl.mkMapView = mkMapView
     mkMapView.delegate = mapViewDelegateImpl
     mkMapView.showsUserLocation = true
     locationManager.delegate = cLLocationManagerDelegateImpl

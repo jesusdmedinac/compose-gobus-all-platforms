@@ -10,48 +10,117 @@ import MapKit
 import ComposeApp
 
 class MapViewDelegateImpl : NSObject, MKMapViewDelegate {
+  var currentLocation: SharedUserLocation = SharedUserLocation(
+    lat: 0.0,
+    long: 0.0,
+    bearing: 0.0,
+    timestamp: InstantUtilsKt.now()
+  )
+  private var mapState: MapState = MapState(paths: [])
+  var mkMapView: MKMapView? = nil
+  
+  public func bindMap() {
+    guard let unwrappedMkMapView = mkMapView else {
+      print("MKMapView is nil")
+      return
+    }
+    unwrappedMkMapView.centerCoordinate = CLLocationCoordinate2DMake(
+      currentLocation.lat,
+      currentLocation.long_
+    )
+    unwrappedMkMapView.setCamera(
+      MKMapCamera(
+        lookingAtCenter: CLLocationCoordinate2DMake(
+          currentLocation.lat,
+          currentLocation.long_
+        ),
+        fromEyeCoordinate: CLLocationCoordinate2D(
+          latitude: currentLocation.lat,
+          longitude: currentLocation.long_
+        ), 
+        eyeAltitude: CLLocationDistance(1700)),
+      animated: true
+    )
+  }
+  
+  public func onMapStateChange(mapState: MapState) {
+    self.mapState = mapState
+    guard let unwrappedMkMapView = mkMapView else {
+      print("MKMapView is nil")
+      return
+    }
+    unwrappedMkMapView.removeAnnotations(unwrappedMkMapView.annotations)
+    
+    let busAnnotations = self
+      .mapState
+      .paths
+      .compactMap { path in
+        let travelers = path
+          .activeTravelers
+          .map { traveler in
+            guard traveler.isTraveling else {
+              return BusAnnotation()
+            }
+            guard let currentLocation = traveler.currentLocation else {
+              return BusAnnotation()
+            }
+            let busAnnotation = BusAnnotation()
+            busAnnotation.coordinate = CLLocationCoordinate2DMake(currentLocation.lat, currentLocation.long_)
+            busAnnotation.path = path.name
+            busAnnotation.email = traveler.email
+            busAnnotation.angle = CGFloat((currentLocation.bearing + 90) * Double.pi / 180)
+            busAnnotation.title = path.name
+            
+            return busAnnotation
+          }
+        
+        let drivers = path
+          .activeDrivers
+          .map { driver in
+            guard driver.isTraveling else {
+              return BusAnnotation()
+            }
+            guard let currentLocation = driver.currentLocation else {
+              return BusAnnotation()
+            }
+            let busAnnotation = BusAnnotation()
+            busAnnotation.coordinate = CLLocationCoordinate2DMake(currentLocation.lat, currentLocation.long_)
+            busAnnotation.path = path.name
+            busAnnotation.email = driver.email
+            busAnnotation.angle = CGFloat((currentLocation.bearing + 90) * Double.pi / 180)
+            busAnnotation.title = path.name
+            return busAnnotation
+          }
+        
+        return [travelers, drivers]
+      }
+      .flatMap { $0.flatMap { $0 } }
+    
+    unwrappedMkMapView.addAnnotations(busAnnotations)
+  }
   
   public func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-    if annotation.title == "My Location" {
+    guard let busAnnotation = annotation as? BusAnnotation else {
       return nil
     }
     
-    if let mapState = MapViewModel
-      .companion
-      .INSTANCE
-      .state
-      .value as? MapState {
+    var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: busAnnotation.email)
+    
+    if annotationView == nil {
+      annotationView = MKPinAnnotationView(annotation: busAnnotation, reuseIdentifier: busAnnotation.email)
+      annotationView?.canShowCallout = true
       
-      let annotationIdentifier: String = (annotation.title ?? "") ?? ""
+      let btn = UIButton(type: .detailDisclosure)
+      annotationView?.rightCalloutAccessoryView = btn
       
       let busImage: UIImage = #imageLiteral(resourceName: "bus")
-      var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: annotationIdentifier)
-      
-      if annotationView == nil {
-        annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: annotationIdentifier)
-        annotationView?.canShowCallout = true
-        
-        let btn = UIButton(type: .detailDisclosure)
-        annotationView?.rightCalloutAccessoryView = btn
-        annotationView?.image = busImage
-      } else {
-        annotationView?.annotation = annotation
-      }
-      let email = (annotation.title ?? "") ?? ""
-      let traveler = mapState
-        .getTravelerBy(email: email)
-      let driver = mapState
-        .getDriverBy(email: email)
-      if traveler != nil {
-        annotation.title = ""
-      }
-      /*
-       guard let rotation = annotationView?.transform.rotated(by: 1) else {
-       return nil
-       }
-       annotationView?.transform = rotation*/
-      
-      return annotationView
-    } else { return nil }
+      annotationView?.image = busImage
+      annotationView?.centerOffset = CGPointMake(0, 1)
+    } else {
+      annotationView?.annotation = annotation
+    }
+    annotationView?.transform = CGAffineTransform(rotationAngle: busAnnotation.angle)
+    
+    return annotationView
   }
 }
