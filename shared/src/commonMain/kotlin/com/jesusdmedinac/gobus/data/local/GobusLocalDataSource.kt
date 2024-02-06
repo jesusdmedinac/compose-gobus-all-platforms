@@ -42,15 +42,16 @@ class GobusLocalDataSource(
     suspend inline fun <reified T : RealmObject> updateIsTraveling(
         isTraveling: Boolean,
     ) = runCatching {
+        val user = realm.query<T>()
+            .find()
+            .first()
         realm
             .write {
-                query<T>()
-                    .find()
-                    .firstOrNull()
+                findLatest(user)
                     ?.apply {
                         when (this) {
-                            is Traveler -> findLatest(this)?.isTraveling = isTraveling
-                            is Driver -> findLatest(this)?.isTraveling = isTraveling
+                            is Traveler -> this.isTraveling = isTraveling
+                            is Driver -> this.isTraveling = isTraveling
                         }
                     }
                     ?: throw Throwable("No active user to update isTraveling as $isTraveling")
@@ -82,15 +83,15 @@ class GobusLocalDataSource(
     }
 
     suspend fun markTravelAsEnded() = runCatching {
+        val travel = realm.query<Travel>()
+            .sort("startTime", Sort.DESCENDING)
+            .find()
+            .first()
         realm
             .write {
-                query<Travel>()
-                    .sort("startTime", Sort.DESCENDING)
-                    .find()
-                    .firstOrNull()
-                    ?.let { traveler -> findLatest(traveler) }
-                    ?.also {
-                        it.endTime = Clock.System.now().toRealmInstant()
+                findLatest(travel)
+                    ?.apply {
+                        endTime = Clock.System.now().toRealmInstant()
                     }
             }
     }

@@ -5,7 +5,6 @@ import com.jesusdmedinac.gobus.data.remote.model.Path
 import com.jesusdmedinac.gobus.data.remote.model.Travel
 import com.jesusdmedinac.gobus.data.remote.model.Traveler
 import com.jesusdmedinac.gobus.data.remote.model.UserLocation
-import dev.gitlive.firebase.firestore.ChangeType
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.where
 import kotlinx.coroutines.flow.Flow
@@ -50,7 +49,7 @@ interface GobusRemoteDataSource {
     suspend fun markTravelAsEnded(travelRemotePath: String): Result<Travel>
 
     suspend fun getPathsThatContains(pathPrompt: String): Result<List<Path>>
-    fun getPaths(): Result<Flow<List<Path>>>
+    fun getPaths(): Result<Flow<List<Flow<Path>>>>
     suspend fun getPathBy(name: String): Result<Path>
     suspend fun addOrUpdatePath(
         pathName: String,
@@ -320,29 +319,14 @@ class GobusRemoteDataSourceImpl(
             .collection("paths")
             .snapshots
             .map { querySnapshot ->
-                querySnapshot.documentChanges.mapNotNull { dc ->
-                    when (dc.type) {
-                        ChangeType.ADDED -> {
-                            println("dct ADDED $dc")
-                            dc.document.data<Path>()
-                        }
-
-                        ChangeType.MODIFIED -> {
-                            println("dct MODIFIED $dc")
-                            dc.document.data<Path>()
-                        }
-
-                        ChangeType.REMOVED -> {
-                            println("dct REMOVED $dc")
-                            null
-                        }
-
-                        else -> {
-                            println("dct else $dc")
-                            null
-                        }
+                querySnapshot
+                    .documents
+                    .map { documentSnapshot ->
+                        documentSnapshot
+                            .reference
+                            .snapshots
+                            .map { it.data<Path>() }
                     }
-                }
             }
     }
 

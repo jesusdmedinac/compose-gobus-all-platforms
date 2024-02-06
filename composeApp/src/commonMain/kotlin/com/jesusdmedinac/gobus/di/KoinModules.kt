@@ -1,6 +1,7 @@
 package com.jesusdmedinac.gobus.di
 
 import com.jesusdmedinac.gobus.data.FirebaseAuthDataSource
+import com.jesusdmedinac.gobus.data.GobusFirebaseBridge
 import com.jesusdmedinac.gobus.data.GobusRemoteDataSource
 import com.jesusdmedinac.gobus.data.GobusRemoteDataSourceImpl
 import com.jesusdmedinac.gobus.data.GobusRepository
@@ -45,6 +46,7 @@ fun dataModule() = module {
     }
     single<GobusRemoteDataSource> { GobusRemoteDataSourceImpl(get()) }
     single { GobusLocalDataSource(get()) }
+    single { GobusFirebaseBridge() }
 }
 
 fun domainModule() = module {
@@ -55,6 +57,6 @@ fun presentationModule() = module {
     single { HomeScreenViewModel(get()) }
     single { LoginScreenViewModel(get()) }
     single { MainScreenViewModel(get()) }
-    single { MapViewModel(get()) }
+    single { MapViewModel(get(), get()) }
     single { SignupScreenViewModel(get()) }
 }

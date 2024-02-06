@@ -224,7 +224,16 @@ class GobusRepository(
             addPathAndTravelForDriverResult,
             updateDriverIsTravelingResult,
         )
-        if (results.all { it.isSuccess }) {
+        if (
+            (
+                addPathAndTravelForTravelerResult.isSuccess &&
+                    updateTravelerIsTravelingResult.isSuccess
+                ) ||
+            (
+                addPathAndTravelForDriverResult.isSuccess &&
+                    updateDriverIsTravelingResult.isSuccess
+                )
+        ) {
             Result.success(Unit)
         } else {
             Result.failure(
@@ -332,7 +341,7 @@ class GobusRepository(
             .updateIsTraveling(isTraveling = false)
         val updateDriverIsTravelingResult: Result<LocalDriver> = gobusLocalDataSource
             .updateIsTraveling(isTraveling = false)
-        val getLastTravelByStartTimeResult = gobusLocalDataSource
+        val markTravelAsEndedAndRemoveUserFromPath = gobusLocalDataSource
             .getLastTravelByStartTime()
             .fold(
                 onSuccess = { travel ->
@@ -369,7 +378,13 @@ class GobusRepository(
                         removeTravelerResult,
                         removeDriverResult,
                     )
-                    if (results.all { it.isSuccess }) {
+                    if (
+                        markRemoteTravelAsEndedResult.isSuccess &&
+                        markLocalTravelAsEndedResult.isSuccess && (
+                            removeTravelerResult.isSuccess ||
+                                removeDriverResult.isSuccess
+                            )
+                    ) {
                         Result.success(Unit)
                     } else {
                         Result.failure(
@@ -387,9 +402,15 @@ class GobusRepository(
         val results = listOf(
             updateTravelerIsTravelingResult,
             updateDriverIsTravelingResult,
-            getLastTravelByStartTimeResult,
+            markTravelAsEndedAndRemoveUserFromPath,
         )
-        if (results.all { it.isSuccess }) {
+        if (
+            (
+                updateTravelerIsTravelingResult.isSuccess ||
+                    updateDriverIsTravelingResult.isSuccess
+                ) &&
+            markTravelAsEndedAndRemoveUserFromPath.isSuccess
+        ) {
             Result.success(Unit)
         } else {
             Result.failure(
@@ -445,8 +466,19 @@ class GobusRepository(
         gobusRemoteDataSource
             .getPaths()
             .fold(
-                onSuccess = { flowOfListOfPaths ->
-                    Result.success(flowOfListOfPaths.map { paths -> paths.map { path -> path.toDomainPath() } })
+                onSuccess = { flowOfListOfFlowOfPaths ->
+                    Result.success(
+                        flowOfListOfFlowOfPaths
+                            .map { listOfFlowOfPaths ->
+                                listOfFlowOfPaths
+                                    .map { flowOfPath ->
+                                        flowOfPath
+                                            .map { path ->
+                                                path.toDomainPath()
+                                            }
+                                    }
+                            },
+                    )
                 },
                 onFailure = { Result.failure(it) },
             )
