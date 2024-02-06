@@ -1,15 +1,12 @@
 package com.jesusdmedinac.gobus.data.remote.model
 
-import io.realm.kotlin.ext.realmListOf
-import io.realm.kotlin.types.RealmList
-import io.realm.kotlin.types.RealmObject
-import io.realm.kotlin.types.annotations.PrimaryKey
-import org.mongodb.kbson.ObjectId
+import dev.gitlive.firebase.firestore.DocumentReference
+import kotlinx.serialization.Serializable
 
-class Path : RealmObject {
-    @PrimaryKey
-    var _id: ObjectId = ObjectId()
-    var name: String = ""
-    var activeTravelers: RealmList<Traveler> = realmListOf()
-    var activeDrivers: RealmList<Driver> = realmListOf()
-}
+@Serializable
+data class Path(
+    val reference: DocumentReference? = null,
+    val name: String = "",
+    val activeTravelers: List<DocumentReference> = emptyList(),
+    val activeDrivers: List<DocumentReference> = emptyList(),
+)

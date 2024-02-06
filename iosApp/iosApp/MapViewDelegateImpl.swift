@@ -16,7 +16,7 @@ class MapViewDelegateImpl : NSObject, MKMapViewDelegate {
     bearing: 0.0,
     timestamp: InstantUtilsKt.now()
   )
-  private var mapState: MapState = MapState(paths: [])
+  private var mapState: MapState = MapState(paths: [], currentTraveler: nil, currentDriver: nil)
   var mkMapView: MKMapView? = nil
   
   public func bindMap() {

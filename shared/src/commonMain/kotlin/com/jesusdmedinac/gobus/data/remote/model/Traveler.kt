@@ -1,13 +1,12 @@
 package com.jesusdmedinac.gobus.data.remote.model
 
-import io.realm.kotlin.types.RealmObject
-import io.realm.kotlin.types.annotations.PrimaryKey
-import org.mongodb.kbson.ObjectId
+import dev.gitlive.firebase.firestore.DocumentReference
+import kotlinx.serialization.Serializable
 
-class Traveler : RealmObject {
-    @PrimaryKey
-    var _id: ObjectId = ObjectId()
-    var userCredentials: UserCredentials? = null
-    var favoritePath: String = ""
-    var currentLocation: UserLocation? = UserLocation()
-}
+@Serializable
+data class Traveler(
+    val reference: DocumentReference? = null,
+    val userCredentials: UserCredentials? = null,
+    val favoritePath: DocumentReference? = null,
+    val currentLocation: UserLocation? = null,
+)

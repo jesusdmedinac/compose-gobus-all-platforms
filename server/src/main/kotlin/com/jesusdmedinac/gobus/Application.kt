@@ -1,7 +1,6 @@
 package com.jesusdmedinac.gobus
 
 import SERVER_PORT
-import com.jesusdmedinac.gobus.data.MongoDBAtlasDataSource
 import com.jesusdmedinac.gobus.domain.model.UserCredentials
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -33,7 +32,7 @@ fun Application.module() {
         post("/register") {
             /*val userCredential = call.receive<DataUserCredentials>()
             GobusRepository(
-                MongoDBAtlasDataSource(),
+                mongoDBAtlasDataSource,
                 GobusLocalDataSource(MongoDBRealmDataSource().realm),
             )
                 .signup(userCredential.toUserCredentials())
@@ -60,7 +59,7 @@ fun Application.authentication() {
             realm = "Access to the '/' path"
             validate { credentials ->
                 val userCredentials = DataUserCredentials(credentials.name, credentials.password)
-                MongoDBAtlasDataSource()
+                mongoDBAtlasDataSource
                     .login(userCredentials)
                 UserIdPrincipal(userCredentials.email)
             }

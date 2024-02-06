@@ -1,8 +1,9 @@
 package com.jesusdmedinac.gobus.data.remote.model
 
-import io.realm.kotlin.types.EmbeddedRealmObject
+import kotlinx.serialization.Serializable
 
-class UserCredentials : EmbeddedRealmObject {
-    var email: String = ""
-    var password: String = ""
-}
+@Serializable
+data class UserCredentials(
+    val email: String = "",
+    val password: String = "",
+)

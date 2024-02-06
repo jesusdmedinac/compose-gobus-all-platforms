@@ -1,11 +1,15 @@
 package com.jesusdmedinac.gobus.data.remote.model
 
-import io.realm.kotlin.types.EmbeddedRealmObject
-import io.realm.kotlin.types.RealmInstant
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.serialization.Serializable
 
-class UserLocation : EmbeddedRealmObject {
-    var lat: Double = 0.0
-    var long: Double = 0.0
-    var bearing: Double = 0.0
-    var timestamp: RealmInstant = RealmInstant.now()
-}
+@Serializable
+data class UserLocation(
+    val email: String = "",
+    val lat: Double = 0.0,
+    val long: Double = 0.0,
+    val bearing: Double = 0.0,
+    val timestamp: Instant = Clock.System.now(),
+    val pathName: String = "",
+)

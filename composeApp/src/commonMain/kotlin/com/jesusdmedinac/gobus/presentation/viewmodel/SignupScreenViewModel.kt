@@ -3,25 +3,23 @@ package com.jesusdmedinac.gobus.presentation.viewmodel
 import com.jesusdmedinac.gobus.data.GobusRepository
 import com.jesusdmedinac.gobus.domain.model.UserCredentials
 import com.jesusdmedinac.gobus.domain.model.UserType
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import moe.tlaster.precompose.viewmodel.ViewModel
+import moe.tlaster.precompose.viewmodel.viewModelScope
+import org.orbitmvi.orbit.Container
+import org.orbitmvi.orbit.ContainerHost
+import org.orbitmvi.orbit.container
+import org.orbitmvi.orbit.syntax.simple.intent
+import org.orbitmvi.orbit.syntax.simple.reduce
 
 class SignupScreenViewModel(
     private val gobusRepository: GobusRepository,
-) {
-    private val scope: CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val _state = MutableStateFlow(SignupScreenState())
-    val state = _state
+) : ViewModel(), ContainerHost<SignupScreenState, SignupScreenSideEffect> {
+    override val container: Container<SignupScreenState, SignupScreenSideEffect> =
+        viewModelScope.container(SignupScreenState())
 
-    fun signup() = scope.launch {
+    fun signup() = intent {
         with(
-            state
-                .value,
+            state,
         ) {
             gobusRepository.signup(
                 userCredentials,
@@ -30,82 +28,102 @@ class SignupScreenViewModel(
             )
         }
             .onSuccess {
-                _state.update {
-                    it.copy(createUserStep = CreateUserStep.Signup)
+                reduce {
+                    state.copy(
+                        createUserStep = CreateUserStep.Signup,
+                        throwable = null,
+                    )
                 }
             }
-            .onFailure {
-                it.printStackTrace()
+            .onFailure { throwable ->
+                reduce {
+                    state.copy(
+                        throwable = throwable,
+                    )
+                }
             }
     }
 
-    fun onUserTypeChange(userType: UserType) = scope.launch {
-        state.update {
-            it.copy(
+    fun onUserTypeChange(userType: UserType) = intent {
+        reduce {
+            state.copy(
                 userType = userType,
             )
         }
     }
 
-    fun onEmailChange(email: String) = scope.launch {
-        state.update {
-            it.copy(
-                userCredentials = it.userCredentials.copy(email = email),
+    fun onEmailChange(email: String) = intent {
+        if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$".toRegex())) {
+            reduce {
+                state.copy(
+                    throwable = Throwable("Quizás tu correo está mal escrito 🤔"),
+                )
+            }
+        } else {
+            reduce {
+                state.copy(
+                    throwable = null,
+                )
+            }
+        }
+        reduce {
+            state.copy(
+                userCredentials = state.userCredentials.copy(email = email),
             )
         }
     }
 
-    fun onPasswordChange(password: String) = scope.launch {
-        state.update {
-            it.copy(
-                userCredentials = it.userCredentials.copy(password = password),
+    fun onPasswordChange(password: String) = intent {
+        reduce {
+            state.copy(
+                userCredentials = state.userCredentials.copy(password = password),
             )
         }
     }
 
-    fun onPathChange(path: String) = scope.launch {
-        state.update {
-            it.copy(
+    fun onPathChange(path: String) = intent {
+        reduce {
+            state.copy(
                 path = path,
             )
         }
     }
 
-    fun onBackClick() = scope.launch {
-        when (state.value.createUserStep) {
+    fun onBackClick() = intent {
+        when (state.createUserStep) {
             CreateUserStep.Main -> Unit
             CreateUserStep.UserType -> {
-                state.update { it.copy(createUserStep = CreateUserStep.Main) }
+                reduce { state.copy(createUserStep = CreateUserStep.Main) }
             }
 
             CreateUserStep.Email -> {
-                state.update { it.copy(createUserStep = CreateUserStep.UserType) }
+                reduce { state.copy(createUserStep = CreateUserStep.UserType) }
             }
 
             CreateUserStep.Password -> {
-                state.update { it.copy(createUserStep = CreateUserStep.Email) }
+                reduce { state.copy(createUserStep = CreateUserStep.Email) }
             }
 
             CreateUserStep.Path -> {
-                state.update { it.copy(createUserStep = CreateUserStep.Password) }
+                reduce { state.copy(createUserStep = CreateUserStep.Password) }
             }
 
             CreateUserStep.Signup -> Unit
         }
     }
 
-    fun onNextClick() = scope.launch {
-        when (state.value.createUserStep) {
+    fun onNextClick() = intent {
+        when (state.createUserStep) {
             CreateUserStep.UserType -> {
-                _state.update { it.copy(createUserStep = CreateUserStep.Email) }
+                reduce { state.copy(createUserStep = CreateUserStep.Email) }
             }
 
             CreateUserStep.Email -> {
-                _state.update { it.copy(createUserStep = CreateUserStep.Password) }
+                reduce { state.copy(createUserStep = CreateUserStep.Password) }
             }
 
             CreateUserStep.Password -> {
-                _state.update { it.copy(createUserStep = CreateUserStep.Path) }
+                reduce { state.copy(createUserStep = CreateUserStep.Path) }
             }
 
             CreateUserStep.Path,
@@ -123,7 +141,10 @@ data class SignupScreenState(
     val userType: UserType = UserType.Traveler,
     val isEmailError: Boolean = false,
     val isPasswordError: Boolean = false,
+    val throwable: Throwable? = null,
 )
+
+sealed class SignupScreenSideEffect
 
 enum class CreateUserStep {
     Main,

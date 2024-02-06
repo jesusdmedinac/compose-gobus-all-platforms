@@ -45,7 +45,7 @@ fun SignupScreen(
     navigateToMain: () -> Unit = {},
     navigateToHome: () -> Unit = {},
 ) {
-    val signupScreenState by signupScreenViewModel.state.collectAsState()
+    val signupScreenState by signupScreenViewModel.container.stateFlow.collectAsState()
     LaunchedEffect(signupScreenState.createUserStep) {
         if (signupScreenState.createUserStep == CreateUserStep.Signup) {
             navigateToHome()
@@ -168,6 +168,8 @@ fun SignupScreen(
 
                     CreateUserStep.Email -> {
                         Text("Compártenos tu email", style = MaterialTheme.typography.h4)
+                        val throwable = signupScreenState.throwable
+                        val isError = throwable != null
                         OutlinedTextField(
                             email,
                             onValueChange = {
@@ -188,14 +190,22 @@ fun SignupScreen(
                             ),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
+                            isError = isError,
                         )
+                        if (isError) {
+                            Text(
+                                throwable?.message.toString(),
+                                style = MaterialTheme.typography.body1,
+                                color = MaterialTheme.colors.error,
+                            )
+                        }
                         Spacer(modifier = Modifier.weight(1f))
                         Button(
                             onClick = {
                                 signupScreenViewModel.onNextClick()
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = email.text.isNotEmpty(),
+                            enabled = email.text.isNotEmpty() && !isError,
                         ) {
                             Text("Continuar")
                         }
@@ -239,6 +249,8 @@ fun SignupScreen(
 
                     CreateUserStep.Path -> {
                         Text("¿Y tu ruta favorita?", style = MaterialTheme.typography.h4)
+                        val throwable = signupScreenState.throwable
+                        val isError = throwable != null
                         OutlinedTextField(
                             path,
                             onValueChange = {
@@ -259,7 +271,15 @@ fun SignupScreen(
                             ),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
+                            isError = isError,
                         )
+                        if (isError) {
+                            Text(
+                                throwable?.let { it::class.simpleName } ?: "",
+                                style = MaterialTheme.typography.body1,
+                                color = MaterialTheme.colors.error,
+                            )
+                        }
                         Spacer(modifier = Modifier.weight(1f))
                         Button(
                             onClick = {

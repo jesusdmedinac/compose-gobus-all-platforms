@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "892734723976",
+    "firebase_url": "https://gobus-260206.firebaseio.com",
+    "project_id": "gobus-260206",
+    "storage_bucket": "gobus-260206.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:892734723976:android:22fa1f6d5b5563a3c9cc3d",
+        "android_client_info": {
+          "package_name": "com.jesusdmedinac.gobus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "892734723976-mcbdc35aotmhavflv34apnjqdh1ea67c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrqSN457-BhVZP4AoLoFPCSTqVZkNvHb8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "892734723976-mcbdc35aotmhavflv34apnjqdh1ea67c.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

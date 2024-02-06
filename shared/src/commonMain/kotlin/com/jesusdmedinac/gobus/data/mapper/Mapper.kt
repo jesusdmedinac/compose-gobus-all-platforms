@@ -7,7 +7,10 @@ import com.jesusdmedinac.gobus.domain.model.Traveler
 import com.jesusdmedinac.gobus.domain.model.UserCredentials
 import com.jesusdmedinac.gobus.domain.model.UserLocation
 import io.realm.kotlin.types.RealmInstant
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Instant
+import com.jesusdmedinac.gobus.data.local.model.Driver as LocalDriver
+import com.jesusdmedinac.gobus.data.local.model.Traveler as LocalTraveler
 import com.jesusdmedinac.gobus.data.remote.model.Driver as DataDriver
 import com.jesusdmedinac.gobus.data.remote.model.Path as DataPath
 import com.jesusdmedinac.gobus.data.remote.model.Travel as DataTravel
@@ -16,17 +19,19 @@ import com.jesusdmedinac.gobus.data.remote.model.UserCredentials as DataUserCred
 import com.jesusdmedinac.gobus.data.remote.model.UserLocation as DataUserLocation
 
 // region domain to remote
-fun UserCredentials.toDataUserCredentials(): DataUserCredentials = DataUserCredentials().also {
-    it.email = email
-    it.password = password
-}
+fun UserCredentials.toDataUserCredentials(): DataUserCredentials = DataUserCredentials(
+    email,
+    password,
+)
 
-fun UserLocation.toDataUserLocation(): DataUserLocation = DataUserLocation().also {
-    it.lat = lat
-    it.long = long
-    it.bearing = bearing
-    it.timestamp = timestamp.toRealmInstant()
-}
+fun UserLocation.toDataUserLocation(): DataUserLocation = DataUserLocation(
+    email,
+    latitude,
+    longitude,
+    bearing,
+    timestamp,
+    pathName,
+)
 
 fun Instant.toRealmInstant(): RealmInstant = RealmInstant.from(
     epochSeconds,
@@ -35,40 +40,87 @@ fun Instant.toRealmInstant(): RealmInstant = RealmInstant.from(
 // endregion
 
 // region remote to domain
-fun RealmInstant.toInstant(): Instant = Instant.fromEpochSeconds(
-    epochSeconds,
-    nanosecondAdjustment = nanosecondsOfSecond,
-)
-
 fun DataUserLocation.toDomainUserLocation(): UserLocation = UserLocation(
+    email,
     lat,
     long,
     bearing,
-    timestamp.toInstant(),
+    timestamp,
+    pathName,
 )
 
-fun DataTraveler.toDomainTraveler(): Traveler = Traveler(
+suspend fun DataTraveler.toDomainTraveler(isTraveling: Boolean): Traveler = Traveler(
     userCredentials?.email ?: "",
-    favoritePath,
+    favoritePath
+        ?.get()
+        ?.data<DataPath>()
+        ?.name
+        ?: "",
     currentLocation?.toDomainUserLocation(),
+    isTraveling = isTraveling,
 )
 
-fun DataDriver.toDomainDriver(): Driver = Driver(
+suspend fun DataDriver.toDomainDriver(isTraveling: Boolean): Driver = Driver(
     userCredentials?.email ?: "",
-    workingPath,
+    workingPath
+        ?.get()
+        ?.data<DataPath>()
+        ?.name
+        ?: "",
     currentLocation?.toDomainUserLocation(),
+    isTraveling = isTraveling,
 )
 
-fun DataPath.toDomainPath(): Path = Path(
+suspend fun DataPath.toDomainPath(): Path = Path(
     name,
-    activeTravelers.map { it.toDomainTraveler() },
-    activeDrivers.map { it.toDomainDriver() },
+    activeTravelers
+        .map { documentReference ->
+            documentReference
+                .snapshots
+                .map { documentSnapshot ->
+                    documentSnapshot
+                        .data<DataTraveler>()
+                        .toDomainTraveler(isTraveling = true)
+                }
+        },
+    activeDrivers
+        .map { documentReference ->
+            documentReference
+                .snapshots
+                .map { documentSnapshot ->
+                    documentSnapshot
+                        .data<DataDriver>()
+                        .toDomainDriver(isTraveling = true)
+                }
+        },
 )
 
-fun DataTravel.toDomainTravel(): Travel = Travel(
-    startTime?.toInstant(),
-    endTime?.toInstant(),
-    path?.toDomainPath(),
-    traveler?.toDomainTraveler(),
+suspend fun DataTravel.toDomainTravel(): Travel = Travel(
+    startTime,
+    endTime,
+    path
+        ?.get()
+        ?.data<DataPath>()
+        ?.toDomainPath(),
+    traveler
+        ?.get()
+        ?.data<DataTraveler>()
+        ?.toDomainTraveler(isTraveling = true),
+    driver
+        ?.get()
+        ?.data<DataDriver>()
+        ?.toDomainDriver(isTraveling = true),
+)
+// endregion
+
+// region local to domain
+fun LocalTraveler.toDomainTraveler(): Traveler = Traveler(
+    email = email,
+    isTraveling = isTraveling,
+)
+
+fun LocalDriver.toDomainDriver(): Driver = Driver(
+    email = email,
+    isTraveling = isTraveling,
 )
 // endregion

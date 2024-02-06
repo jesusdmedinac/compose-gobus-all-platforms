@@ -42,7 +42,7 @@ fun LoginScreen(
     navigateToMain: () -> Unit = {},
     navigateToHome: () -> Unit = {},
 ) {
-    val loginScreenState by loginScreenViewModel.state.collectAsState()
+    val loginScreenState by loginScreenViewModel.container.stateFlow.collectAsState()
     LaunchedEffect(loginScreenState.loginStep) {
         if (loginScreenState.loginStep == LoginStep.Login) {
             navigateToHome()

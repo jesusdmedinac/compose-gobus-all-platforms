@@ -1,19 +1,16 @@
 package com.jesusdmedinac.gobus.data.remote.model
 
-import io.realm.kotlin.ext.realmListOf
-import io.realm.kotlin.types.RealmInstant
-import io.realm.kotlin.types.RealmList
-import io.realm.kotlin.types.RealmObject
-import io.realm.kotlin.types.annotations.PrimaryKey
-import org.mongodb.kbson.ObjectId
+import dev.gitlive.firebase.firestore.DocumentReference
+import kotlinx.datetime.Instant
+import kotlinx.serialization.Serializable
 
-class Travel : RealmObject {
-    @PrimaryKey
-    var _id: ObjectId = ObjectId()
-    var startTime: RealmInstant? = null
-    var endTime: RealmInstant? = null
-    var path: Path? = null
-    var traveler: Traveler? = null
-    var driver: Driver? = null
-    var locationHistory: RealmList<UserLocation> = realmListOf()
-}
+@Serializable
+data class Travel(
+    val reference: DocumentReference? = null,
+    val startTime: Instant? = null,
+    val endTime: Instant? = null,
+    val path: DocumentReference? = null,
+    val traveler: DocumentReference? = null,
+    val driver: DocumentReference? = null,
+    val locationHistory: List<UserLocation> = emptyList(),
+)

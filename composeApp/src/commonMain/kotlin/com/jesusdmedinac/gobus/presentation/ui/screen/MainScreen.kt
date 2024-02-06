@@ -22,7 +22,7 @@ fun MainScreen(
     onSignupClick: () -> Unit = {},
     onUserIsLoggedIn: () -> Unit = {},
 ) {
-    val mainScreenState by mainScreenViewModel.state.collectAsState()
+    val mainScreenState by mainScreenViewModel.container.stateFlow.collectAsState()
     LaunchedEffect(Unit) {
         mainScreenViewModel.validateUserLoggedIn()
     }

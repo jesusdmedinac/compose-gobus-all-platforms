@@ -27,7 +27,7 @@ class CLLocationManagerDelegateImpl : NSObject, CLLocationManagerDelegate {
   
   public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
     guard let location = locations.last else { return }
-    HomeScreenViewModel.companion.INSTANCE.onLocationChange(
+    KoinHelper().homeScreenViewModel().onLocationChange(
       userLocation: SharedUserLocation(
         lat: Double(location.coordinate.latitude),
         long: Double(location.coordinate.longitude),

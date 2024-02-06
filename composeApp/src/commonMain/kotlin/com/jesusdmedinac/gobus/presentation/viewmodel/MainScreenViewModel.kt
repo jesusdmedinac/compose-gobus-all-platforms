@@ -1,30 +1,26 @@
 package com.jesusdmedinac.gobus.presentation.viewmodel
 
 import com.jesusdmedinac.gobus.data.GobusRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import moe.tlaster.precompose.viewmodel.ViewModel
+import moe.tlaster.precompose.viewmodel.viewModelScope
+import org.orbitmvi.orbit.Container
+import org.orbitmvi.orbit.ContainerHost
+import org.orbitmvi.orbit.container
+import org.orbitmvi.orbit.syntax.simple.intent
+import org.orbitmvi.orbit.syntax.simple.reduce
 
 class MainScreenViewModel(
     private val gobusRepository: GobusRepository,
-) {
-    private val scope: CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val _state = MutableStateFlow(MainScreenState())
-    val state = _state.asStateFlow()
+) : ViewModel(), ContainerHost<MainScreenState, MainScreenSideEffect> {
+    override val container: Container<MainScreenState, MainScreenSideEffect> =
+        viewModelScope.container(MainScreenState())
 
-    fun validateUserLoggedIn() {
-        scope.launch {
-            val isUserLoggedIn = gobusRepository.isUserLoggedIn()
-            _state.update {
-                it.copy(
-                    isUserLoggedIn = isUserLoggedIn,
-                )
-            }
+    fun validateUserLoggedIn() = intent {
+        val isUserLoggedIn = gobusRepository.isUserLoggedIn()
+        reduce {
+            state.copy(
+                isUserLoggedIn = isUserLoggedIn,
+            )
         }
     }
 }
@@ -32,3 +28,5 @@ class MainScreenViewModel(
 data class MainScreenState(
     val isUserLoggedIn: Boolean = false,
 )
+
+sealed class MainScreenSideEffect

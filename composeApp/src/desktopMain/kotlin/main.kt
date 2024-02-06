@@ -48,5 +48,8 @@ fun main() = application {
 @Preview
 @Composable
 fun AppDesktopPreview() {
-    App(maps = { modifier, currentLocationState, mapState -> })
+    App(
+        maps = { modifier, currentLocationState, mapState -> },
+        onHomeDisplayed = {},
+    )
 }

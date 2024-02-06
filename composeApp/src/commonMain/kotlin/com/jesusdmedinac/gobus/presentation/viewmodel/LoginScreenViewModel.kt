@@ -2,88 +2,79 @@ package com.jesusdmedinac.gobus.presentation.viewmodel
 
 import com.jesusdmedinac.gobus.data.GobusRepository
 import com.jesusdmedinac.gobus.domain.model.UserCredentials
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import moe.tlaster.precompose.viewmodel.ViewModel
+import moe.tlaster.precompose.viewmodel.viewModelScope
+import org.orbitmvi.orbit.Container
+import org.orbitmvi.orbit.ContainerHost
+import org.orbitmvi.orbit.container
+import org.orbitmvi.orbit.syntax.simple.intent
+import org.orbitmvi.orbit.syntax.simple.reduce
 
 class LoginScreenViewModel(
     private val gobusRepository: GobusRepository,
-) {
-    private val scope: CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val _state = MutableStateFlow(LoginScreenState())
-    val state = _state
+) : ViewModel(), ContainerHost<LoginScreenState, LoginScreenSideEffect> {
 
-    fun login() {
-        scope.launch {
-            state
-                .value
-                .userCredentials
-                .let { gobusRepository.login(it) }
-                .onSuccess {
-                    state.update {
-                        it.copy(loginStep = LoginStep.Login)
-                    }
+    override val container: Container<LoginScreenState, LoginScreenSideEffect> =
+        viewModelScope.container(LoginScreenState())
+
+    fun login() = intent {
+        gobusRepository.login(state.userCredentials)
+            .onSuccess {
+                reduce {
+                    state.copy(loginStep = LoginStep.Login)
                 }
-                .onFailure {
-                    // it.printStackTrace()
-                }
-        }
-    }
-
-    fun onEmailChange(email: String) {
-        scope.launch {
-            state.update {
-                it.copy(
-                    userCredentials = it.userCredentials.copy(email = email),
-                )
             }
-        }
-    }
-
-    fun onPasswordChange(password: String) {
-        scope.launch {
-            state.update {
-                it.copy(
-                    userCredentials = it.userCredentials.copy(password = password),
-                )
+            .onFailure {
+                // it.printStackTrace()
             }
+    }
+
+    fun onEmailChange(email: String) = intent {
+        reduce {
+            state.copy(
+                userCredentials = state.userCredentials.copy(email = email),
+            )
         }
     }
 
-    fun onBackClick() = scope.launch {
-        when (state.value.loginStep) {
+    fun onPasswordChange(password: String) = intent {
+        reduce {
+            state.copy(
+                userCredentials = state.userCredentials.copy(password = password),
+            )
+        }
+    }
+
+    fun onBackClick() = intent {
+        when (state.loginStep) {
             LoginStep.Main,
             LoginStep.Login,
             -> Unit
 
             LoginStep.Email -> {
-                _state.update {
-                    it.copy(loginStep = LoginStep.Main)
+                reduce {
+                    state.copy(loginStep = LoginStep.Main)
                 }
             }
 
             LoginStep.Password -> {
-                _state.update {
-                    it.copy(loginStep = LoginStep.Email)
+                reduce {
+                    state.copy(loginStep = LoginStep.Email)
                 }
             }
         }
     }
 
-    fun onNextClick() = scope.launch {
-        when (state.value.loginStep) {
+    fun onNextClick() = intent {
+        when (state.loginStep) {
             LoginStep.Main,
             LoginStep.Login,
             LoginStep.Password,
             -> Unit
 
             LoginStep.Email -> {
-                _state.update {
-                    it.copy(loginStep = LoginStep.Password)
+                reduce {
+                    state.copy(loginStep = LoginStep.Password)
                 }
             }
         }
@@ -96,6 +87,8 @@ data class LoginScreenState(
     val isEmailError: Boolean = false,
     val isPasswordError: Boolean = false,
 )
+
+sealed class LoginScreenSideEffect
 
 enum class LoginStep {
     Main,

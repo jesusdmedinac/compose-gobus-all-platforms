@@ -30,7 +30,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.jesusdmedinac.gobus.presentation.viewmodel.HomeScreenViewModel
+import org.koin.core.Koin
 
 class MainActivity : ComponentActivity() {
 
@@ -46,6 +46,8 @@ class MainActivity : ComponentActivity() {
             isMyLocationEnabled = false,
         ),
     )
+
+    private lateinit var koin: Koin
 
     // Register the permissions callback, which handles the user's response to the
     // system permissions dialog. Save the return value, an instance of
@@ -76,17 +78,18 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             App(
-                maps = { modifier, userPosition, mapState ->
+                maps = { modifier, mapState ->
                     var currentLatLng by remember { mutableStateOf(LatLng(0.0, 0.0)) }
                     val cameraPositionState = rememberCameraPositionState {
                         position = CameraPosition.fromLatLngZoom(currentLatLng, 17f)
                     }
                     var wasCameraMoved by remember { mutableStateOf(false) }
-                    LaunchedEffect(userPosition) {
-                        currentLatLng = LatLng(userPosition.lat, userPosition.long)
+                    LaunchedEffect(mapState) {
+                        val currentLocation = mapState.initialLocation()
+                        currentLatLng = LatLng(currentLocation.latitude, currentLocation.longitude)
                         if (!wasCameraMoved &&
-                            userPosition.lat != 0.0 &&
-                            userPosition.long != 0.0
+                            currentLocation.latitude != 0.0 &&
+                            currentLocation.longitude != 0.0
                         ) {
                             cameraPositionState.position =
                                 CameraPosition.fromLatLngZoom(currentLatLng, 17f)
@@ -108,67 +111,24 @@ class MainActivity : ComponentActivity() {
                     ) {
                         val icon =
                             BitmapDescriptorFactory.fromResource(R.drawable.bus_ceil)
-                        val paths = mapState
-                            .paths
-                        paths
-                            .forEach { path ->
-
-                                path
-                                    .activeTravelers
-                                    .mapNotNull { traveler ->
-                                        if (traveler.isTraveling) {
-                                            traveler
-                                        } else {
-                                            null
-                                        }
-                                    }
-                                    .forEach { traveler ->
-                                        traveler
-                                            .currentLocation
-                                            ?.let { currentLocation ->
-                                                Marker(
-                                                    state = MarkerState(
-                                                        position = LatLng(
-                                                            currentLocation.lat,
-                                                            currentLocation.long,
-                                                        ),
-                                                    ),
-                                                    title = path.name,
-                                                    snippet = path.name,
-                                                    icon = icon,
-                                                    rotation = (currentLocation.bearing + 90.0).toFloat(),
-                                                    anchor = Offset(0.5f, 0.5f),
-                                                )
-                                            }
-                                    }
-                                path
-                                    .activeDrivers
-                                    .mapNotNull { driver ->
-                                        if (driver.isTraveling) {
-                                            driver
-                                        } else {
-                                            null
-                                        }
-                                    }
-                                    .forEach { driver ->
-                                        driver
-                                            .currentLocation
-                                            ?.let { currentLocation ->
-                                                Marker(
-                                                    state = MarkerState(
-                                                        position = LatLng(
-                                                            currentLocation.lat,
-                                                            currentLocation.long,
-                                                        ),
-                                                    ),
-                                                    title = path.name,
-                                                    snippet = path.name,
-                                                    icon = icon,
-                                                    rotation = (currentLocation.bearing + 90.0).toFloat(),
-                                                    anchor = Offset(0.5f, 0.5f),
-                                                )
-                                            }
-                                    }
+                        mapState
+                            .userLocations
+                            .forEach { userLocation ->
+                                with(userLocation) {
+                                    Marker(
+                                        state = MarkerState(
+                                            position = LatLng(
+                                                latitude,
+                                                longitude,
+                                            ),
+                                        ),
+                                        title = pathName,
+                                        snippet = pathName,
+                                        icon = icon,
+                                        rotation = (bearing + 90.0).toFloat(),
+                                        anchor = Offset(0.5f, 0.5f),
+                                    )
+                                }
                             }
                     }
                 },
@@ -226,15 +186,13 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        HomeScreenViewModel.INSTANCE.onCleared()
-    }
 }
 
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    App(maps = { modifier, userPosition, mapState -> })
+    App(
+        maps = { modifier, mapState -> },
+        onHomeDisplayed = {},
+    )
 }

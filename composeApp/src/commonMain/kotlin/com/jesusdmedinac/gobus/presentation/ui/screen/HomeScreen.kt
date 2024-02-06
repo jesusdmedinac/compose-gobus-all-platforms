@@ -40,7 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.jesusdmedinac.gobus.domain.model.UserLocation
+import com.jesusdmedinac.gobus.presentation.ui.screen.homescreen.DiscoverScreen
+import com.jesusdmedinac.gobus.presentation.ui.screen.homescreen.MyPathsScreen
 import com.jesusdmedinac.gobus.presentation.viewmodel.HomeScreenViewModel
 import com.jesusdmedinac.gobus.presentation.viewmodel.MapState
 import com.jesusdmedinac.gobus.presentation.viewmodel.MapViewModel
@@ -54,12 +55,11 @@ fun HomeScreen(
     mapViewModel: MapViewModel,
     maps: @Composable (
         Modifier,
-        UserLocation,
         MapState,
-    ) -> Unit = { modifier, userPosition, mapState -> },
+    ) -> Unit = { modifier, mapState -> },
 ) {
-    val homeScreenState by homeScreenViewModel.state.collectAsState()
-    val mapState by mapViewModel.state.collectAsState()
+    val homeScreenState by homeScreenViewModel.container.stateFlow.collectAsState()
+    val mapState by mapViewModel.container.stateFlow.collectAsState()
     if (homeScreenState.isStartTravelingDialogShown) {
         AlertDialog(
             onDismissRequest = {
@@ -186,7 +186,7 @@ fun HomeScreen(
     }
     Scaffold(
         bottomBar = {
-            BottomAppBar() {
+            BottomAppBar {
                 Spacer(
                     modifier = Modifier.width(16.dp),
                 )
@@ -232,7 +232,7 @@ fun HomeScreen(
                             Icons.Default.Info,
                             contentDescription = null,
                         )
-                        Text("Mis rutas")
+                        Text("Descubrir")
                     }
                 }
 
@@ -257,7 +257,7 @@ fun HomeScreen(
                             Icons.Default.Info,
                             contentDescription = null,
                         )
-                        Text("Descubrir")
+                        Text("Mis rutas")
                     }
                 }
 
@@ -283,7 +283,7 @@ fun HomeScreen(
                 )
                 FloatingActionButton(
                     onClick = {
-                        if (homeScreenState.isTraveling) {
+                        if (mapState.isTraveling) {
                             homeScreenViewModel.onStopTravelingClick()
                         } else {
                             homeScreenViewModel.onStartTravelingClick()
@@ -292,7 +292,7 @@ fun HomeScreen(
                     backgroundColor = MaterialTheme.colors.primarySurface,
                     contentColor = MaterialTheme.colors.onPrimary,
                 ) {
-                    if (homeScreenState.isTraveling) {
+                    if (mapState.isTraveling) {
                         Icon(
                             painterResource("ic-stop.xml"),
                             contentDescription = null,
@@ -311,11 +311,16 @@ fun HomeScreen(
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            maps(
-                Modifier.fillMaxSize(),
-                homeScreenState.userLocation,
-                mapState,
-            )
+            var currentScreen by remember { mutableStateOf("viajar") }
+            when (currentScreen) {
+                "viajar" -> maps(
+                    Modifier.fillMaxSize(),
+                    mapState,
+                )
+
+                "descubrir" -> DiscoverScreen(mapState)
+                "mis-rutas" -> MyPathsScreen()
+            }
         }
     }
 }

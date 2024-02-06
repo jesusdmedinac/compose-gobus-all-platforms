@@ -19,15 +19,17 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
-import com.jesusdmedinac.gobus.domain.model.UserLocation
+import com.jesusdmedinac.gobus.di.KoinHelper
 import com.jesusdmedinac.gobus.presentation.viewmodel.HomeScreenViewModel
+import com.jesusdmedinac.gobus.presentation.viewmodel.MapViewModel
 
 class CurrentLocationService : Service() {
-    private lateinit var homeScreenViewModel: HomeScreenViewModel
+    private val mapViewModel: MapViewModel by lazy {
+        KoinHelper.mapViewModel()
+    }
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        homeScreenViewModel = HomeScreenViewModel.INSTANCE
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         // Create the NotificationChannel.
@@ -74,13 +76,12 @@ class CurrentLocationService : Service() {
                     locationResult
                         .lastLocation
                         ?.run {
-                            UserLocation(
+                            mapViewModel.onLocationChange(
                                 latitude,
                                 longitude,
                                 bearing.toDouble(),
                             )
                         }
-                        ?.let { homeScreenViewModel.onLocationChange(it) }
                 }
             }
             val looper = Looper.getMainLooper()

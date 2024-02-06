@@ -3,13 +3,14 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.realmKotlin)
+    alias(libs.plugins.googleServices)
 }
 
 kotlin {
     androidTarget {
         compilations.all {
             kotlinOptions {
-                jvmTarget = "1.8"
+                jvmTarget = "11"
             }
         }
     }
@@ -23,10 +24,13 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(libs.realm.base)
-            api(libs.realm.sync)
             api(libs.kotlinx.serialization.json)
             implementation(libs.coroutines.core)
-            api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+            api(libs.kotlinx.datetime)
+            api(libs.koin.core)
+            api(libs.koin.core.coroutines)
+            api(libs.firebase.auth)
+            api(libs.firebase.firestore)
         }
         androidMain.dependencies {
             implementation(libs.coroutines.android)
@@ -35,6 +39,8 @@ kotlin {
             implementation(libs.coroutines.core.jvm)
         }
     }
+
+    jvmToolchain(11)
 }
 
 android {

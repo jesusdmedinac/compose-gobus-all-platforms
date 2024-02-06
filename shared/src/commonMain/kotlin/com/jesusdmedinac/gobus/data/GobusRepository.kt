@@ -3,59 +3,79 @@ package com.jesusdmedinac.gobus.data
 import com.jesusdmedinac.gobus.data.exception.StartStopTravelException
 import com.jesusdmedinac.gobus.data.local.GobusLocalDataSource
 import com.jesusdmedinac.gobus.data.mapper.toDataUserCredentials
-import com.jesusdmedinac.gobus.data.mapper.toDataUserLocation
+import com.jesusdmedinac.gobus.data.mapper.toDomainDriver
 import com.jesusdmedinac.gobus.data.mapper.toDomainPath
-import com.jesusdmedinac.gobus.data.remote.model.Driver
+import com.jesusdmedinac.gobus.data.mapper.toDomainTraveler
 import com.jesusdmedinac.gobus.data.remote.model.Path
-import com.jesusdmedinac.gobus.data.remote.model.Traveler
+import com.jesusdmedinac.gobus.domain.model.Driver
+import com.jesusdmedinac.gobus.domain.model.Traveler
+import com.jesusdmedinac.gobus.domain.model.User
 import com.jesusdmedinac.gobus.domain.model.UserCredentials
 import com.jesusdmedinac.gobus.domain.model.UserType
-import io.realm.kotlin.Realm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withContext
 import com.jesusdmedinac.gobus.data.local.model.Driver as LocalDriver
 import com.jesusdmedinac.gobus.data.local.model.Travel as LocalTravel
 import com.jesusdmedinac.gobus.data.local.model.Traveler as LocalTraveler
-import com.jesusdmedinac.gobus.domain.model.UserLocation as DomainUserLocation
+import com.jesusdmedinac.gobus.data.remote.model.Driver as DataDriver
+import com.jesusdmedinac.gobus.data.remote.model.Traveler as DataTraveler
 
 class GobusRepository(
-    private val mongoDBAtlasDataSource: MongoDBAtlasDataSource,
-    private val gobusLocalDataSource: GobusLocalDataSource,
+    private val firebaseAuthDataSource: FirebaseAuthDataSource,
+    val gobusLocalDataSource: GobusLocalDataSource,
+    val gobusRemoteDataSource: GobusRemoteDataSource,
 ) {
-    fun isUserLoggedIn(): Boolean = mongoDBAtlasDataSource
-        .currentUser
-        .isSuccess
+    fun isUserLoggedIn(): Boolean = firebaseAuthDataSource
+        .isUserLoggedIn
 
     suspend fun signup(
         userCredentials: UserCredentials,
         userType: UserType,
         path: String,
     ) = withContext(Dispatchers.IO) {
-        mongoDBAtlasDataSource
+        firebaseAuthDataSource
             .signup(userCredentials)
             .fold(
                 onSuccess = {
                     when (userType) {
                         UserType.Unknown -> throw Throwable()
                         UserType.Traveler -> {
-                            val traveler = Traveler().apply {
-                                this.userCredentials = userCredentials.toDataUserCredentials()
-                                favoritePath = path
-                            }
-                            addTravelToAtlasAndRealm(traveler)
+                            gobusRemoteDataSource
+                                .addOrUpdatePath(
+                                    path,
+                                )
+                                .fold(
+                                    onSuccess = { path ->
+                                        val traveler = DataTraveler(
+                                            userCredentials = userCredentials.toDataUserCredentials(),
+                                            favoritePath = path.reference,
+                                        )
+                                        addTravelerToLocalAndRemote(traveler)
+                                    },
+                                    onFailure = { Result.failure(it) },
+                                )
                         }
 
                         UserType.Driver -> {
-                            val driver = Driver().apply {
-                                this.userCredentials = userCredentials.toDataUserCredentials()
-                                workingPath = path
-                            }
-                            addDriverToAtlasAndRealm(driver)
+                            gobusRemoteDataSource
+                                .addOrUpdatePath(
+                                    path,
+                                )
+                                .fold(
+                                    onSuccess = { path ->
+                                        val driver = DataDriver(
+                                            userCredentials = userCredentials.toDataUserCredentials(),
+                                            workingPath = path.reference,
+                                        )
+                                        addDriverToLocalAndRemote(driver)
+                                    },
+                                    onFailure = { Result.failure(it) },
+                                )
                         }
                     }
-                    Result.success(Unit)
                 },
                 onFailure = {
                     Result.failure(it)
@@ -63,84 +83,106 @@ class GobusRepository(
             )
     }
 
-    private suspend fun addTravelToAtlasAndRealm(traveler: Traveler) {
+    private suspend fun addTravelerToLocalAndRemote(traveler: DataTraveler) =
         gobusRemoteDataSource
-            .onSuccess { it.addTraveler(traveler) }
-        gobusLocalDataSource.addTraveler(
-            LocalTraveler().apply {
-                email = traveler.userCredentials?.email ?: ""
-            },
-        )
-    }
+            .addTraveler(traveler)
+            .onSuccess {
+                gobusLocalDataSource.addUser(
+                    LocalTraveler().apply {
+                        email = traveler.userCredentials?.email ?: ""
+                    },
+                )
+            }
+            .onFailure {
+                it.printStackTrace()
+            }
 
-    private suspend fun addDriverToAtlasAndRealm(driver: Driver) {
+    private suspend fun addDriverToLocalAndRemote(driver: DataDriver) =
         gobusRemoteDataSource
-            .onSuccess { it.addDriver(driver) }
-        gobusLocalDataSource.addDriver(
-            LocalDriver().apply {
-                email = driver.userCredentials?.email ?: ""
-            },
-        )
-    }
+            .addDriver(driver)
+            .onSuccess {
+                gobusLocalDataSource.addUser(
+                    LocalDriver().apply {
+                        email = driver.userCredentials?.email ?: ""
+                    },
+                )
+            }
+            .onFailure {
+                it.printStackTrace()
+            }
 
-    private val gobusRemoteDataSource: Result<GobusRemoteDataSource>
-        get() = mongoDBAtlasDataSource
-            .remoteGobusRemoteDataSource
-
-    suspend fun login(userCredentials: UserCredentials): Result<Realm> =
+    suspend fun login(userCredentials: UserCredentials): Result<Unit> =
         withContext(Dispatchers.IO) {
-            mongoDBAtlasDataSource
+            firebaseAuthDataSource
                 .login(userCredentials)
                 .fold(
                     onSuccess = {
-                        gobusLocalDataSource.addTraveler(
+                        gobusLocalDataSource.addUser(
                             LocalTraveler().apply {
                                 email = userCredentials.email
                             },
                         )
-                        Result.success(it)
+                        Result.success(Unit)
                     },
                     onFailure = { Result.failure(it) },
                 )
         }
 
     suspend fun updateCurrentPosition(
-        userLocation: DomainUserLocation,
+        latitude: Double,
+        longitude: Double,
+        bearing: Double,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             gobusLocalDataSource
-                .getCurrentTraveler()
+                .getCurrentUser<LocalTraveler>()
                 .onSuccess { traveler ->
-                    gobusRemoteDataSource
-                        .onSuccess {
-                            it.updateTravelerCurrentPosition(
-                                email = traveler.email,
-                                userLocation = userLocation.toDataUserLocation(),
-                            )
-                        }
-                        .onFailure {
-                            // it.printStackTrace()
-                        }
+                    if (traveler.isTraveling) {
+                        gobusLocalDataSource
+                            .getLastTravelByStartTime()
+                            .onSuccess { travel ->
+                                gobusRemoteDataSource
+                                    .updateTravelerCurrentPosition(
+                                        email = traveler.email,
+                                        latitude,
+                                        longitude,
+                                        bearing,
+                                        path = travel.path,
+                                    )
+                            }
+                            .onFailure { it.printStackTrace() }
+                    } else {
+                        gobusRemoteDataSource
+                            .markTravelerLocationAsNull(traveler.email)
+                    }
                 }
                 .onFailure {
-                    // it.printStackTrace()
+                    it.printStackTrace()
                 }
             gobusLocalDataSource
-                .getCurrentDriver()
+                .getCurrentUser<LocalDriver>()
                 .onSuccess { driver ->
-                    gobusRemoteDataSource
-                        .onSuccess {
-                            it.updateDriverCurrentPosition(
-                                email = driver.email,
-                                userLocation = userLocation.toDataUserLocation(),
-                            )
-                        }
-                        .onFailure {
-                            // it.printStackTrace()
-                        }
+                    if (driver.isTraveling) {
+                        gobusLocalDataSource
+                            .getLastTravelByStartTime()
+                            .onSuccess { travel ->
+                                gobusRemoteDataSource
+                                    .updateDriverCurrentPosition(
+                                        email = driver.email,
+                                        latitude,
+                                        longitude,
+                                        bearing,
+                                        path = travel.path,
+                                    )
+                            }
+                            .onFailure { it.printStackTrace() }
+                    } else {
+                        gobusRemoteDataSource
+                            .markTravelerLocationAsNull(driver.email)
+                    }
                 }
                 .onFailure {
-                    // it.printStackTrace()
+                    it.printStackTrace()
                 }
         }
             .fold(
@@ -151,45 +193,31 @@ class GobusRepository(
 
     suspend fun startTravelOn(path: String): Result<Unit> = withContext(Dispatchers.IO) {
         val addPathAndTravelForTravelerResult: Result<Unit> = gobusLocalDataSource
-            .getCurrentTraveler()
+            .getCurrentUser<LocalTraveler>()
             .fold(
                 onSuccess = { localTraveler ->
-                    gobusRemoteDataSource
-                        .fold(
-                            onSuccess = { gobusRemoteDataSource ->
-                                getTravelerToAddItToPathAndTravel(
-                                    gobusRemoteDataSource,
-                                    localTraveler,
-                                    path,
-                                )
-                            },
-                            onFailure = { Result.failure(it) },
-                        )
+                    getTravelerToAddItToPathAndTravel(
+                        localTraveler,
+                        path,
+                    )
                 },
                 onFailure = { Result.failure(it) },
             )
-        val updateTravelerIsTravelingResult: Result<LocalTraveler?> = gobusLocalDataSource
-            .updateTravelerIsTraveling(isTraveling = true)
+        val updateTravelerIsTravelingResult: Result<LocalTraveler> = gobusLocalDataSource
+            .updateIsTraveling(isTraveling = true)
         val addPathAndTravelForDriverResult: Result<Unit> = gobusLocalDataSource
-            .getCurrentDriver()
+            .getCurrentUser<LocalDriver>()
             .fold(
                 onSuccess = { localDriver ->
-                    gobusRemoteDataSource
-                        .fold(
-                            onSuccess = { gobusRemoteDataSource ->
-                                getDriverToAddItToPathAndTravel(
-                                    gobusRemoteDataSource,
-                                    localDriver,
-                                    path,
-                                )
-                            },
-                            onFailure = { Result.failure(it) },
-                        )
+                    getDriverToAddItToPathAndTravel(
+                        localDriver,
+                        path,
+                    )
                 },
                 onFailure = { Result.failure(it) },
             )
-        val updateDriverIsTravelingResult: Result<LocalDriver?> = gobusLocalDataSource
-            .updateDriverIsTraveling(isTraveling = true)
+        val updateDriverIsTravelingResult: Result<LocalDriver> = gobusLocalDataSource
+            .updateIsTraveling(isTraveling = true)
         val results = listOf(
             addPathAndTravelForTravelerResult,
             updateTravelerIsTravelingResult,
@@ -210,15 +238,13 @@ class GobusRepository(
     }
 
     private suspend fun GobusRepository.getTravelerToAddItToPathAndTravel(
-        gobusRemoteDataSource: GobusRemoteDataSource,
         localTraveler: LocalTraveler,
         path: String,
     ) = gobusRemoteDataSource
         .getTravelerBy(localTraveler.email)
         .fold(
             onSuccess = { traveler ->
-                addPathAndTravelToRemoteDataSource(
-                    gobusRemoteDataSource,
+                addPathAndTravel(
                     path,
                     traveler = traveler,
                 )
@@ -227,15 +253,13 @@ class GobusRepository(
         )
 
     private suspend fun GobusRepository.getDriverToAddItToPathAndTravel(
-        gobusRemoteDataSource: GobusRemoteDataSource,
         localDriver: LocalDriver,
         path: String,
     ) = gobusRemoteDataSource
         .getDriverBy(localDriver.email)
         .fold(
             onSuccess = { driver ->
-                addPathAndTravelToRemoteDataSource(
-                    gobusRemoteDataSource,
+                addPathAndTravel(
                     path,
                     driver = driver,
                 )
@@ -243,11 +267,10 @@ class GobusRepository(
             onFailure = { Result.failure(it) },
         )
 
-    private suspend fun GobusRepository.addPathAndTravelToRemoteDataSource(
-        gobusRemoteDataSource: GobusRemoteDataSource,
+    private suspend fun GobusRepository.addPathAndTravel(
         path: String,
-        traveler: Traveler? = null,
-        driver: Driver? = null,
+        traveler: DataTraveler? = null,
+        driver: DataDriver? = null,
     ) = gobusRemoteDataSource
         .addOrUpdatePath(
             path,
@@ -257,7 +280,6 @@ class GobusRepository(
         .fold(
             onSuccess = { path ->
                 addTravelToRemoteAndLocalDataSource(
-                    gobusRemoteDataSource,
                     path,
                     traveler = traveler,
                     driver = driver,
@@ -267,10 +289,9 @@ class GobusRepository(
         )
 
     private suspend fun addTravelToRemoteAndLocalDataSource(
-        gobusRemoteDataSource: GobusRemoteDataSource,
         path: Path,
-        traveler: Traveler? = null,
-        driver: Driver? = null,
+        traveler: DataTraveler? = null,
+        driver: DataDriver? = null,
     ) = gobusRemoteDataSource
         .addTravel(
             path.name,
@@ -279,19 +300,27 @@ class GobusRepository(
         )
         .fold(
             onSuccess = { remoteTravel ->
-                gobusLocalDataSource
-                    .addTravel(
-                        remoteTravel._id,
-                        path.name,
-                    )
-                    .fold(
-                        onSuccess = {
-                            Result.success(Unit)
-                        },
-                        onFailure = {
-                            Result.failure(it)
-                        },
-                    )
+                remoteTravel
+                    .reference
+                    ?.path
+                    ?.let { remoteTravelId ->
+                        gobusLocalDataSource
+                            .addTravel(
+                                LocalTravel().apply {
+                                    remoteTravelPath = remoteTravelId
+                                    this.path = path.name
+                                },
+                            )
+                            .fold(
+                                onSuccess = {
+                                    Result.success(Unit)
+                                },
+                                onFailure = {
+                                    Result.failure(it)
+                                },
+                            )
+                    }
+                    ?: Result.failure(Throwable("Remote travel reference must not be null"))
             },
             onFailure = {
                 Result.failure(it)
@@ -299,59 +328,38 @@ class GobusRepository(
         )
 
     suspend fun stopTravelOn(): Result<Unit> = withContext(Dispatchers.IO) {
-        val updateTravelerIsTravelingResult = gobusLocalDataSource
-            .updateTravelerIsTraveling(isTraveling = false)
-        val updateDriverIsTravelingResult = gobusLocalDataSource
-            .updateDriverIsTraveling(isTraveling = false)
+        val updateTravelerIsTravelingResult: Result<LocalTraveler> = gobusLocalDataSource
+            .updateIsTraveling(isTraveling = false)
+        val updateDriverIsTravelingResult: Result<LocalDriver> = gobusLocalDataSource
+            .updateIsTraveling(isTraveling = false)
         val getLastTravelByStartTimeResult = gobusLocalDataSource
             .getLastTravelByStartTime()
             .fold(
                 onSuccess = { travel ->
-                    val markRemoteTravelAsEndedResult = gobusRemoteDataSource
-                        .fold(
-                            onSuccess = { gobusRemoteDataSource ->
-                                travel
-                                    .remoteTravelId
-                                    ?.let { gobusRemoteDataSource.markTravelAsEnded(it) }
-                                    ?: Result.failure(Throwable("Remote travel is null on local travel"))
-                            },
-                            onFailure = { Result.failure(it) },
-                        )
+                    val markRemoteTravelAsEndedResult = travel
+                        .remoteTravelPath
+                        .let { gobusRemoteDataSource.markTravelAsEnded(it) }
                     val markLocalTravelAsEndedResult = gobusLocalDataSource
                         .markTravelAsEnded()
                     val removeTravelerResult = gobusLocalDataSource
-                        .getCurrentTraveler()
+                        .getCurrentUser<LocalTraveler>()
                         .fold(
                             onSuccess = { localTraveler ->
-                                gobusRemoteDataSource
-                                    .fold(
-                                        onSuccess = { gobusRemoteDataSource ->
-                                            getTravelerAndRemoveItFromTravel(
-                                                gobusRemoteDataSource,
-                                                localTraveler,
-                                                travel,
-                                            )
-                                        },
-                                        onFailure = { Result.failure(it) },
-                                    )
+                                getTravelerAndRemoveItFromTravel(
+                                    localTraveler,
+                                    travel,
+                                )
                             },
                             onFailure = { Result.failure(it) },
                         )
                     val removeDriverResult = gobusLocalDataSource
-                        .getCurrentDriver()
+                        .getCurrentUser<LocalDriver>()
                         .fold(
                             onSuccess = { localDriver ->
-                                gobusRemoteDataSource
-                                    .fold(
-                                        onSuccess = { gobusRemoteDataSource ->
-                                            getDriverAndRemoveItFromTravel(
-                                                gobusRemoteDataSource,
-                                                localDriver,
-                                                travel,
-                                            )
-                                        },
-                                        onFailure = { Result.failure(it) },
-                                    )
+                                getDriverAndRemoveItFromTravel(
+                                    localDriver,
+                                    travel,
+                                )
                             },
                             onFailure = { Result.failure(it) },
                         )
@@ -395,7 +403,6 @@ class GobusRepository(
     }
 
     private suspend fun getTravelerAndRemoveItFromTravel(
-        gobusRemoteDataSource: GobusRemoteDataSource,
         localTraveler: LocalTraveler,
         travel: LocalTravel,
     ) = gobusRemoteDataSource
@@ -411,7 +418,6 @@ class GobusRepository(
         )
 
     private suspend fun getDriverAndRemoveItFromTravel(
-        gobusRemoteDataSource: GobusRemoteDataSource,
         localDriver: LocalDriver,
         travel: LocalTravel,
     ) = gobusRemoteDataSource
@@ -428,40 +434,85 @@ class GobusRepository(
 
     suspend fun getPathsThatContains(pathPrompt: String) = withContext(Dispatchers.IO) {
         gobusRemoteDataSource
+            .getPathsThatContains(pathPrompt)
             .fold(
-                onSuccess = {
-                    it
-                        .getPathsThatContains(pathPrompt)
-                        .fold(
-                            onSuccess = { paths -> Result.success(paths.map { path -> path.toDomainPath() }) },
-                            onFailure = { exception -> Result.failure(exception) },
-                        )
-                },
+                onSuccess = { paths -> Result.success(paths.map { path -> path.toDomainPath() }) },
                 onFailure = { exception -> Result.failure(exception) },
             )
     }
 
     suspend fun getPaths() = withContext(Dispatchers.IO) {
         gobusRemoteDataSource
+            .getPaths()
             .fold(
-                onSuccess = { gobusRemoteDataSource ->
+                onSuccess = { flowOfListOfPaths ->
+                    Result.success(flowOfListOfPaths.map { paths -> paths.map { path -> path.toDomainPath() } })
+                },
+                onFailure = { Result.failure(it) },
+            )
+    }
+
+    suspend fun getCurrentTraveler() = withContext(Dispatchers.IO) {
+        gobusLocalDataSource
+            .getCurrentUser<LocalTraveler>()
+            .fold(
+                onSuccess = { currentLocalTraveler ->
+                    val travelerEmail = currentLocalTraveler.email
                     gobusRemoteDataSource
-                        .getPaths()
+                        .getTravelerBy(travelerEmail)
                         .fold(
-                            onSuccess = { flowOfPaths ->
-                                Result.success(
-                                    flowOfPaths
-                                        .map { resultsChangeOfPaths ->
-                                            resultsChangeOfPaths
-                                                .list
-                                                .map { path -> path.toDomainPath() }
-                                        },
-                                )
+                            onSuccess = { traveler ->
+                                Result.success(traveler.toDomainTraveler(currentLocalTraveler.isTraveling))
                             },
-                            onFailure = { exception -> Result.failure(exception) },
+                            onFailure = { Result.failure(it) },
                         )
                 },
-                onFailure = { exception -> Result.failure(exception) },
+                onFailure = { Result.failure(it) },
+            )
+    }
+
+    suspend inline fun <reified T : User> getCurrentUserAsFlow() = withContext(Dispatchers.IO) {
+        gobusLocalDataSource
+            .let {
+                when (T::class) {
+                    Traveler::class -> it.getCurrentUserAsFlow<LocalTraveler>()
+                    Driver::class -> it.getCurrentUserAsFlow<LocalDriver>()
+                    else -> Result.failure(Throwable("T reified class on getCurrentUserAsFlow must be a User: Traveler or Driver but was ${T::class.simpleName}"))
+                }
+            }
+            .fold(
+                onSuccess = { currentLocalTravelerFlow ->
+                    runCatching {
+                        currentLocalTravelerFlow
+                            .mapNotNull { localUser ->
+                                when (localUser) {
+                                    is LocalTraveler -> localUser.toDomainTraveler()
+                                    is LocalDriver -> localUser.toDomainDriver()
+                                    else -> null
+                                }
+                            }
+                    }
+                },
+                onFailure = { Result.failure(it) },
+            )
+    }
+
+    suspend fun getCurrentDriver() = withContext(Dispatchers.IO) {
+        gobusLocalDataSource
+            .getCurrentUser<LocalDriver>()
+            .fold(
+                onSuccess = { currentLocalDriver ->
+                    val driverEmail = currentLocalDriver.email
+                    gobusRemoteDataSource
+                        .getDriverBy(driverEmail)
+                        .fold(
+                            onSuccess = { driver ->
+                                Result.success(driver.toDomainDriver(currentLocalDriver.isTraveling))
+                            },
+                            onFailure = { Result.failure(it) },
+                        )
+                },
+                onFailure = { Result.failure(it) },
             )
     }
 }
