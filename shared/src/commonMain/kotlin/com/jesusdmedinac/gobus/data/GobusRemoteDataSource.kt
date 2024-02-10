@@ -49,7 +49,7 @@ interface GobusRemoteDataSource {
     suspend fun markTravelAsEnded(travelRemotePath: String): Result<Travel>
 
     suspend fun getPathsThatContains(pathPrompt: String): Result<List<Path>>
-    fun getPaths(): Result<Flow<List<Flow<Path>>>>
+    fun getPaths(): Result<Flow<List<Path>>>
     suspend fun getPathBy(name: String): Result<Path>
     suspend fun addOrUpdatePath(
         pathName: String,
@@ -323,9 +323,7 @@ class GobusRemoteDataSourceImpl(
                     .documents
                     .map { documentSnapshot ->
                         documentSnapshot
-                            .reference
-                            .snapshots
-                            .map { it.data<Path>() }
+                            .data<Path>()
                     }
             }
     }

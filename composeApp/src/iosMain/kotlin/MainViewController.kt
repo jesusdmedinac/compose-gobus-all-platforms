@@ -9,21 +9,10 @@ import platform.MapKit.MKMapView
 fun MainViewController(
     mkMapView: MKMapView,
     onHomeDisplayed: () -> Unit = {},
-    onCurrentLocationChange: (UserLocation) -> Unit = {},
     onMapStateChange: (MapState) -> Unit = {},
 ) = ComposeUIViewController {
     App(
         maps = { modifier, mapState ->
-            mapState
-                .run {
-                    currentTraveler
-                        ?.currentLocation
-                        ?.let { onCurrentLocationChange(it) }
-
-                    currentDriver
-                        ?.currentLocation
-                        ?.let { onCurrentLocationChange(it) }
-                }
             onMapStateChange(mapState)
             UIKitView(
                 modifier = modifier,

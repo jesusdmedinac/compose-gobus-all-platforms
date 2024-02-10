@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.googleServices)
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+    id("com.google.relay") version "0.3.02"
 }
 
 kotlin {

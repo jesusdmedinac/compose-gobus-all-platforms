@@ -11,12 +11,21 @@ import ComposeApp
 
 class MapViewDelegateImpl : NSObject, MKMapViewDelegate {
   var currentLocation: SharedUserLocation = SharedUserLocation(
-    lat: 0.0,
-    long: 0.0,
+    email: "",
+    latitude: 0.0,
+    longitude: 0.0,
     bearing: 0.0,
-    timestamp: InstantUtilsKt.now()
+    timestamp: InstantUtilsKt.now(),
+    pathName: ""
   )
-  private var mapState: MapState = MapState(paths: [], currentTraveler: nil, currentDriver: nil)
+  private var mapState: MapState = MapState(
+    paths: [],
+    userLocations: [],
+    currentUser: nil, 
+    latitude: 0.0,
+    longitude: 0.0,
+    bearing: 0.0,
+    throwable: nil)
   var mkMapView: MKMapView? = nil
   
   public func bindMap() {
@@ -25,19 +34,19 @@ class MapViewDelegateImpl : NSObject, MKMapViewDelegate {
       return
     }
     unwrappedMkMapView.centerCoordinate = CLLocationCoordinate2DMake(
-      currentLocation.lat,
-      currentLocation.long_
+      currentLocation.latitude,
+      currentLocation.longitude
     )
     unwrappedMkMapView.setCamera(
       MKMapCamera(
         lookingAtCenter: CLLocationCoordinate2DMake(
-          currentLocation.lat,
-          currentLocation.long_
+          currentLocation.latitude,
+          currentLocation.longitude
         ),
         fromEyeCoordinate: CLLocationCoordinate2D(
-          latitude: currentLocation.lat,
-          longitude: currentLocation.long_
-        ), 
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude
+        ),
         eyeAltitude: CLLocationDistance(1700)),
       animated: true
     )
@@ -45,6 +54,7 @@ class MapViewDelegateImpl : NSObject, MKMapViewDelegate {
   
   public func onMapStateChange(mapState: MapState) {
     self.mapState = mapState
+    self.currentLocation = mapState.initialLocation()
     guard let unwrappedMkMapView = mkMapView else {
       print("MKMapView is nil")
       return
@@ -53,48 +63,17 @@ class MapViewDelegateImpl : NSObject, MKMapViewDelegate {
     
     let busAnnotations = self
       .mapState
-      .paths
-      .compactMap { path in
-        let travelers = path
-          .activeTravelers
-          .map { traveler in
-            guard traveler.isTraveling else {
-              return BusAnnotation()
-            }
-            guard let currentLocation = traveler.currentLocation else {
-              return BusAnnotation()
-            }
-            let busAnnotation = BusAnnotation()
-            busAnnotation.coordinate = CLLocationCoordinate2DMake(currentLocation.lat, currentLocation.long_)
-            busAnnotation.path = path.name
-            busAnnotation.email = traveler.email
-            busAnnotation.angle = CGFloat((currentLocation.bearing + 90) * Double.pi / 180)
-            busAnnotation.title = path.name
-            
-            return busAnnotation
-          }
+      .userLocations
+      .map { userLocation in
+        let busAnnotation = BusAnnotation()
+        busAnnotation.coordinate = CLLocationCoordinate2DMake(userLocation.latitude, userLocation.longitude)
+        busAnnotation.path = userLocation.pathName
+        busAnnotation.email = userLocation.email
+        busAnnotation.angle = CGFloat((userLocation.bearing + 90) * Double.pi / 180)
+        busAnnotation.title = userLocation.pathName
         
-        let drivers = path
-          .activeDrivers
-          .map { driver in
-            guard driver.isTraveling else {
-              return BusAnnotation()
-            }
-            guard let currentLocation = driver.currentLocation else {
-              return BusAnnotation()
-            }
-            let busAnnotation = BusAnnotation()
-            busAnnotation.coordinate = CLLocationCoordinate2DMake(currentLocation.lat, currentLocation.long_)
-            busAnnotation.path = path.name
-            busAnnotation.email = driver.email
-            busAnnotation.angle = CGFloat((currentLocation.bearing + 90) * Double.pi / 180)
-            busAnnotation.title = path.name
-            return busAnnotation
-          }
-        
-        return [travelers, drivers]
+        return busAnnotation
       }
-      .flatMap { $0.flatMap { $0 } }
     
     unwrappedMkMapView.addAnnotations(busAnnotations)
   }

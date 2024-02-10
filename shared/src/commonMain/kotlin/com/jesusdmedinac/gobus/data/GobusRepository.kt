@@ -466,16 +466,13 @@ class GobusRepository(
         gobusRemoteDataSource
             .getPaths()
             .fold(
-                onSuccess = { flowOfListOfFlowOfPaths ->
+                onSuccess = { flowOfListOfPaths ->
                     Result.success(
-                        flowOfListOfFlowOfPaths
-                            .map { listOfFlowOfPaths ->
-                                listOfFlowOfPaths
-                                    .map { flowOfPath ->
-                                        flowOfPath
-                                            .map { path ->
-                                                path.toDomainPath()
-                                            }
+                        flowOfListOfPaths
+                            .map { listOfPaths ->
+                                listOfPaths
+                                    .map { path ->
+                                        path.toDomainPath()
                                     }
                             },
                     )

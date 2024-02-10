@@ -15,8 +15,6 @@ struct ComposeView: UIViewControllerRepresentable {
       onHomeDisplayed: {
         self.locationManager.requestAlwaysAuthorization()
         mapViewDelegateImpl.bindMap()
-      }, onCurrentLocationChange: { userLocation in
-        mapViewDelegateImpl.currentLocation = userLocation
       },
       onMapStateChange: { mapState in
         mapViewDelegateImpl.onMapStateChange(mapState: mapState)

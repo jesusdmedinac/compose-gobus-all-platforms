@@ -1,20 +1,15 @@
 package com.jesusdmedinac.gobus.presentation.viewmodel
 
-import com.jesusdmedinac.gobus.data.GobusFirebaseBridge
 import com.jesusdmedinac.gobus.data.GobusRepository
-import com.jesusdmedinac.gobus.data.mapper.toDomainPath
 import com.jesusdmedinac.gobus.domain.model.Path
 import com.jesusdmedinac.gobus.domain.model.Traveler
 import com.jesusdmedinac.gobus.domain.model.User
 import com.jesusdmedinac.gobus.domain.model.UserLocation
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flattenMerge
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.onEach
 import moe.tlaster.precompose.viewmodel.ViewModel
 import moe.tlaster.precompose.viewmodel.viewModelScope
 import org.orbitmvi.orbit.Container
@@ -24,9 +19,9 @@ import org.orbitmvi.orbit.syntax.simple.intent
 import org.orbitmvi.orbit.syntax.simple.reduce
 import org.orbitmvi.orbit.syntax.simple.repeatOnSubscription
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MapViewModel(
     private val gobusRepository: GobusRepository,
-    private val gobusFirebaseBridge: GobusFirebaseBridge,
 ) : ViewModel(), ContainerHost<MapState, MapSideEffect> {
 
     override val container: Container<MapState, MapSideEffect> =
@@ -59,52 +54,55 @@ class MapViewModel(
         }
         intent {
             repeatOnSubscription {
-                gobusFirebaseBridge
+                gobusRepository
                     .getPaths()
-                    .flatMapMerge { querySnapshot ->
-                        querySnapshot
-                            .documents
-                            .map { documentSnapshot ->
-                                documentSnapshot
-                                    .data<com.jesusdmedinac.gobus.data.remote.model.Path>()
-                                    .toDomainPath()
-                            }
-                            .flatMap { path ->
-                                val travelersLocation = path
-                                    .activeTravelers
-                                    .map { travelerFlow ->
-                                        travelerFlow
-                                            .mapNotNull { traveler -> traveler.currentLocation }
-                                    }
-                                val driversLocation = path
-                                    .activeDrivers
-                                    .map { driverFlow ->
-                                        driverFlow
-                                            .mapNotNull { driver -> driver.currentLocation }
-                                    }
-                                travelersLocation + driversLocation
-                            }
-                            .asFlow()
-                            .flattenMerge()
-                    }
-                    .collect { userLocation ->
-                        val indexOfFirst = state.userLocations
-                            .indexOfFirst { it.email == userLocation.email }
-                        if (indexOfFirst == -1) {
-                            val userLocations =
-                                state.userLocations + userLocation
-                            reduce {
-                                state.copy(userLocations = userLocations)
-                            }
-                        } else {
-                            val userLocations =
-                                state.userLocations.toMutableList().apply {
-                                    set(indexOfFirst, userLocation)
+                    .onSuccess { flowOfListOfPath ->
+                        flowOfListOfPath
+                            .flatMapMerge { paths ->
+                                reduce {
+                                    state.copy(
+                                        paths = paths,
+                                        userLocations = emptyList(),
+                                    )
                                 }
-                            reduce {
-                                state.copy(userLocations = userLocations)
+                                paths
+                                    .flatMap { path ->
+                                        val travelersLocation = path
+                                            .activeTravelers
+                                            .map { travelerFlow ->
+                                                travelerFlow
+                                                    .mapNotNull { traveler -> traveler.currentLocation }
+                                            }
+                                        val driversLocation = path
+                                            .activeDrivers
+                                            .map { driverFlow ->
+                                                driverFlow
+                                                    .mapNotNull { driver -> driver.currentLocation }
+                                            }
+                                        travelersLocation + driversLocation
+                                    }
+                                    .asFlow()
+                                    .flattenMerge()
                             }
-                        }
+                            .collect { userLocation ->
+                                val indexOfFirst = state.userLocations
+                                    .indexOfFirst { it.email == userLocation.email }
+                                if (indexOfFirst == -1) {
+                                    val userLocations =
+                                        state.userLocations + userLocation
+                                    reduce {
+                                        state.copy(userLocations = userLocations)
+                                    }
+                                } else {
+                                    val userLocations =
+                                        state.userLocations.toMutableList().apply {
+                                            set(indexOfFirst, userLocation)
+                                        }
+                                    reduce {
+                                        state.copy(userLocations = userLocations)
+                                    }
+                                }
+                            }
                     }
             }
         }

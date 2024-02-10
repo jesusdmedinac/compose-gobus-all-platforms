@@ -27,13 +27,10 @@ class CLLocationManagerDelegateImpl : NSObject, CLLocationManagerDelegate {
   
   public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
     guard let location = locations.last else { return }
-    KoinHelper().homeScreenViewModel().onLocationChange(
-      userLocation: SharedUserLocation(
-        lat: Double(location.coordinate.latitude),
-        long: Double(location.coordinate.longitude),
-        bearing: Double(location.course), 
-        timestamp: InstantUtilsKt.now()
-      )
+    KoinHelper().mapViewModel().onLocationChange(
+      latitude: Double(location.coordinate.latitude),
+      longitude: Double(location.coordinate.longitude),
+      bearing: Double(location.course)
     )
   }
   
