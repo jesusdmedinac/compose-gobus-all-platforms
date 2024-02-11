@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,9 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.jesusdmedinac.gobus.presentation.viewmodel.HomeScreenSideEffect
+import com.jesusdmedinac.gobus.presentation.viewmodel.HomeScreenViewModel
+import org.koin.compose.koinInject
 import org.koin.core.Koin
 
 class MainActivity : ComponentActivity() {
@@ -102,6 +106,21 @@ class MainActivity : ComponentActivity() {
                             zoomControlsEnabled = false,
                             myLocationButtonEnabled = false,
                         )
+                    }
+                    val homeScreenViewModel: HomeScreenViewModel = koinInject()
+                    val homeScreenSideEffect: HomeScreenSideEffect by homeScreenViewModel
+                        .container
+                        .sideEffectFlow
+                        .collectAsState(HomeScreenSideEffect.Idle)
+                    LaunchedEffect(homeScreenSideEffect) {
+                        when (homeScreenSideEffect) {
+                            HomeScreenSideEffect.MoveToUserLocation -> {
+                                cameraPositionState.position =
+                                    CameraPosition.fromLatLngZoom(currentLatLng, 17f)
+                            }
+
+                            HomeScreenSideEffect.Idle -> Unit
+                        }
                     }
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),

@@ -1,12 +1,14 @@
 package com.jesusdmedinac.gobus.presentation.viewmodel
 
 import com.jesusdmedinac.gobus.data.GobusRepository
+import kotlinx.coroutines.delay
 import moe.tlaster.precompose.viewmodel.ViewModel
 import moe.tlaster.precompose.viewmodel.viewModelScope
 import org.orbitmvi.orbit.Container
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.container
 import org.orbitmvi.orbit.syntax.simple.intent
+import org.orbitmvi.orbit.syntax.simple.postSideEffect
 import org.orbitmvi.orbit.syntax.simple.reduce
 
 class HomeScreenViewModel(
@@ -74,6 +76,12 @@ class HomeScreenViewModel(
                 it.printStackTrace()
             }
     }
+
+    fun onUserLocationClick() = intent {
+        postSideEffect(HomeScreenSideEffect.MoveToUserLocation)
+        delay(500)
+        postSideEffect(HomeScreenSideEffect.Idle)
+    }
 }
 
 data class HomeScreenState(
@@ -83,4 +91,7 @@ data class HomeScreenState(
     val selectedPath: String = "",
 )
 
-sealed class HomeScreenSideEffect
+sealed class HomeScreenSideEffect {
+    data object Idle : HomeScreenSideEffect()
+    data object MoveToUserLocation : HomeScreenSideEffect()
+}
